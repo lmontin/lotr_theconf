@@ -1,4 +1,4 @@
-import { ICharacter, ICharacterVersion } from '../../types/data';
+import { ICharacter, ICharacterVersion, ICharacterAbility } from '../../types/data';
 import { GameState } from './GameState'; // Assuming GameState is in the same directory
 import { Faction } from './GameState'; // Import Faction type
 
@@ -8,6 +8,7 @@ export class Character {
   public readonly faction: Faction;
   private currentVersionData: ICharacterVersion;
   public strength: number;
+  public isRingbearer: boolean; // Added for game logic
 
   public is_revealed: boolean;
   public is_defeated: boolean;
@@ -26,6 +27,7 @@ export class Character {
     }
     this.currentVersionData = selectedVersion;
     this.strength = selectedVersion.strength;
+    this.isRingbearer = false; // Default to false
 
     this.is_revealed = false;
     this.is_defeated = false;
@@ -61,12 +63,13 @@ export class Character {
     }
   }
 
-  public setLocation(regionId: string | null): void {
+  public setLocation(regionId: string | null, gameState?: GameState): void { // gameState param is optional for compatibility
+    const gameInstance = gameState || this.game;
     this.location = regionId;
     if (regionId) {
-        this.game.log(`${this.name} moved to ${this.game.getRegion(regionId)?.name || regionId}.`);
+        gameInstance.log(`${this.name} moved to ${gameInstance.getRegion(regionId)?.name || regionId}.`);
     } else {
-        this.game.log(`${this.name} was removed from the board.`);
+        gameInstance.log(`${this.name} was removed from the board.`);
     }
   }
 
@@ -74,7 +77,11 @@ export class Character {
     return this.currentVersionData;
   }
 
-  public getAbilities(): string[] {
-    return this.currentVersionData.specialAbilities || [];
+  public getAbilities(): ICharacterAbility[] { // Return type updated
+    return this.currentVersionData.abilities || [];
+  }
+
+  public get locationId(): string | null {
+    return this.location;
   }
 }

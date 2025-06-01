@@ -9,14 +9,22 @@ export interface IRegion {
   fellowshipSpecialForward?: string[];
   startingCapacityFellowship?: number;
   startingCapacitySauron?: number;
+  startingCapacity?: number; // Added from gameData.json
   factionCapacity: number;
 }
 
-export interface ICharacterVersion {
+export interface ICharacterAbility {
   id: string;
-  name: string;
+  text: string;
+  trigger: string; // Consider creating an enum for trigger types
+  condition?: string; // Consider creating an enum for condition types
+}
+
+export interface ICharacterVersion {
+  // id: string; // id seems to be on the parent ICharacter in gameData.json
+  name?: string; // name also seems to be on the parent ICharacter
   strength: number;
-  specialAbilities?: string[];
+  abilities?: ICharacterAbility[]; // Updated from string[]
   flavorText?: string;
   illustrator?: string;
   combatCardLimit?: number;
@@ -30,16 +38,31 @@ export interface ICharacter {
     classic?: ICharacterVersion;
     enhanced?: ICharacterVersion;
   };
+  // location?: string | null; // Location is dynamic, part of game state, not static data
+}
+
+export interface ICombatCardAbility {
+  id: string;
+  text: string;
+  trigger: string;
+  condition?: string;
 }
 
 export interface ICombatCard {
   id: string;
   name: string;
   faction: "Fellowship" | "Sauron" | "Either";
+  cardType: "text" | "strength"; // Added from gameData.json
+  strength: number | null; // Updated to be number or null
+  abilities?: ICombatCardAbility[]; // Updated from string[]
   resolutionOrder: number;
-  strengthBonus?: number;
-  specialAbilities?: string[];
-  effectDescription: string;
+  // effectDescription: string; // Covered by abilities.text
   flavorText?: string;
   illustrator?: string;
+}
+
+export interface IGameData {
+  characters: ICharacter[];
+  regions: IRegion[];
+  combatCards: ICombatCard[];
 }

@@ -33,15 +33,19 @@
   - [x] 1.4 Create data validation utility to ensure gamedata.json integrity
   - [x] 1.5 Set up folder structure (/lib, /components, /data, /tests)
 
-- [ ] 2.0 Implement Game State Management System
+- [x] 2.0 Implement Game State Management System
   - [x] 2.1 Create GameState class with turn tracking, phase management, and player state
   - [x] 2.2 Implement Character class with concealment mechanics (reveal/conceal methods)
-  - [ ] 2.3 Build Region class with capacity checking and occupant tracking
-  - [ ] 2.4 Create Player class with hand, deck, and discard pile management
-  - [ ] 2.5 Implement hand reclaim system (when both players have 9 discards)
-  - [ ] 2.6 Add game logging system for debugging and replay
-  - [ ] 2.7 Create state persistence methods (save/load game)
-  - [ ] 2.8 Write unit tests for all state management classes
+  - [x] 2.3 Build Region class with capacity checking and occupant tracking
+  - [x] 2.4 Create Player class with hand, deck, and discard pile management
+  - [x] 2.5 Implement hand reclaim system (when both players have 9 discards)
+  - [x] 2.6 Add game logging system for debugging and replay
+  - [x] 2.7 Create state persistence methods (save/load game)
+  - [x] 2.8 Write unit tests for all state management classes
+    - [x] `GameState.test.ts` (All tests passing)
+    - [x] `Player.test.ts` (All tests passing)
+    - [x] `Character.test.ts` (All tests passing)
+    - [x] `Region.test.ts` (All tests passing)
 
 - [ ] 3.0 Build Movement and Battle Resolution Systems
   - [ ] 3.1 Implement get_legal_moves function with forward, tunnel, and river path logic
