@@ -105,28 +105,23 @@ describe('Movement Logic', () => {
     test('should include fellowshipSpecialForward moves if applicable and region is enterable', () => {
       // Place Gandalf in Eregion
       const initialLocations = { [gandalfId]: eregionId };
-      gameState = createRichMockGameState(initialLocations);
+      gameState = createRichMockGameState(initialLocations); // REBIND gameState
       const gandalf = gameState.getCharacterById(gandalfId)!;
       expect(gandalf.locationId).toBe(eregionId);
 
-      const eregionModel = gameState.getRegionModel(eregionId)!;
-      const fangornModel = gameState.getRegionModel(fangornId)!;
-
-      // Ensure Fangorn is enterable (e.g., not at capacity for Fellowship)
-      // For this test, assume it's enterable by default or set up explicitly if needed.
+      const eregionModel = gameState.getRegionModel(eregionId)!; // Fetch from new gameState
+      // const fangornModel = gameState.getRegionModel(fangornId)!; // Fetch from new gameState, if needed directly
 
       const legalMoves = getLegalMoves(gandalf, gameState);
       
       const eregionData = mockGameData.regions.find(r => r.id === eregionId);
       expect(eregionData?.fellowshipSpecialForward).toContain(fangornId);
 
-      // Check for the TUNNEL move to Fangorn
       const tunnelMoveToFangorn = legalMoves.find(
         move => move.destinationRegionId === fangornId && move.type === 'TUNNEL'
       );
       expect(tunnelMoveToFangorn).toBeDefined();
 
-      // Also check for regular forward moves from Eregion
       const expectedForwardDestinationIds = eregionModel.fellowshipAdjacent || [];
       expectedForwardDestinationIds.forEach(destId => {
         expect(legalMoves.some(move => move.destinationRegionId === destId && move.type === 'FORWARD')).toBe(true);
@@ -174,24 +169,23 @@ describe('Movement Logic', () => {
 
     test('should not allow movement into a region at full capacity for the character\'s faction', () => {
         // Setup: Mordor is Sauron's starting region, capacity 4. Place 4 Sauron units there.
-        const mordorRegion = gameState.getRegionModel(mordorId)!;
         const sauronChar3Id = mockGameData.characters.find(c => c.faction === 'Sauron' && ![witchKingId, sarumanId, sauronChar1Id, sauronChar2Id].includes(c.id))!.id;
-        const sauronChar4Id = mockGameData.characters.find(c => c.faction === 'Sauron' && ![witchKingId, sarumanId, sauronChar1Id, sauronChar2Id, sauronChar3Id].includes(c.id))!.id;
+        // sauronChar4Id is not strictly needed for the failing assertion, but good for setup clarity if it were.
         
         const initialLocations = {
             [witchKingId]: mordorId,
-            [sarumanId]: mordorId, // Saruman can start elsewhere, but for test, put in Mordor
+            [sarumanId]: mordorId, 
             [sauronChar1Id]: mordorId,
             [sauronChar2Id]: mordorId,
-            // Dagorlad is adjacent to Mordor for Sauron
-            [sauronChar3Id]: dagorladId, // This character will try to move into Mordor
+            [sauronChar3Id]: dagorladId, 
         };
-        gameState = createRichMockGameState(initialLocations);
+        gameState = createRichMockGameState(initialLocations); // REBIND gameState
+
+        const mordorRegion = gameState.getRegionModel(mordorId)!; // Fetch from new gameState
 
         const movingChar = gameState.getCharacterById(sauronChar3Id)!;
         expect(movingChar.locationId).toBe(dagorladId);
         
-        // Verify Mordor is full
         const occupantsInMordor = gameState.getCharactersInRegion(mordorId);
         let sauronCountInMordor = 0;
         occupantsInMordor.forEach(charId => {
@@ -205,7 +199,6 @@ describe('Movement Logic', () => {
 
         const legalMoves = getLegalMoves(movingChar, gameState);
         
-        // Mordor should not be a legal move destination
         const moveToMordor = legalMoves.find(move => move.destinationRegionId === mordorId);
         expect(moveToMordor).toBeUndefined();
     });
@@ -215,19 +208,31 @@ describe('Movement Logic', () => {
 
   describe('canEnterRegion', () => {
     test('should return true if region is not full and no enemies', () => {
-      const frodo = gameState.getCharacterById(frodoId)!; // In The Shire
-      const rhudaurRegion = gameState.getRegionModel(rhudaurId)!; // Rhudaur (for Rivendell)
-      const canEnter = canEnterRegion(frodo, rhudaurRegion, gameState);
+      // Create a local game state where Rhudaur is empty and Frodo is in The Shire.
+      const localGameState = createRichMockGameState({
+        [frodoId]: theShireId,
+        // Other characters like Aragorn and Gandalf are not placed in Rhudaur for this test case,
+        // so Rhudaur will be empty of Fellowship members.
+      });
+      const frodo = localGameState.getCharacterById(frodoId)!; 
+      const rhudaurRegion = localGameState.getRegionModel(rhudaurId)!; 
+
+      // Verify Rhudaur is effectively empty for Fellowship characters in this localGameState
+      const occupantsInRhudaur = localGameState.getCharactersInRegion(rhudaurId);
+      const fellowshipOccupantsInRhudaur = occupantsInRhudaur.filter(
+        charId => localGameState.getCharacterById(charId)?.faction === 'Fellowship'
+      );
+      expect(fellowshipOccupantsInRhudaur.length).toBe(0);
+
+      const canEnter = canEnterRegion(frodo, rhudaurRegion, localGameState);
       expect(canEnter).toBe(true);
     });
 
     test('should return true if region has enemies but is not full (battle will occur)', () => {
-      // Place Frodo in The Shire, Witch-king in Rhudaur (Rivendell)
-      gameState = createRichMockGameState({ [frodoId]: theShireId, [witchKingId]: rhudaurId });
+      gameState = createRichMockGameState({ [frodoId]: theShireId, [witchKingId]: rhudaurId }); // REBIND gameState
       const frodo = gameState.getCharacterById(frodoId)!;
-      const rhudaurRegion = gameState.getRegionModel(rhudaurId)!;
+      const rhudaurRegion = gameState.getRegionModel(rhudaurId)!; // Fetch from new gameState
       
-      // Verify Witch-king is in Rhudaur
       expect(gameState.getCharactersInRegion(rhudaurId)).toContain(witchKingId);
 
       const canEnter = canEnterRegion(frodo, rhudaurRegion, gameState);
@@ -235,13 +240,11 @@ describe('Movement Logic', () => {
     });
 
     test('should return false if region is at capacity for character\'s faction', () => {
-      // The Shire, capacity 4 for Fellowship. Place 4 Fellowship units.
       const gandalfInShireId = mockGameData.characters.find(c => c.name === 'Gandalf')!.id;
       const samInShireId = mockGameData.characters.find(c => c.name === 'Sam')!.id;
       const merryInShireId = mockGameData.characters.find(c => c.name === 'Merry')!.id;
-      // Aragorn will try to move into The Shire from Rivendell
       
-      gameState = createRichMockGameState({
+      gameState = createRichMockGameState({ // REBIND gameState
         [frodoId]: theShireId,
         [gandalfInShireId]: theShireId,
         [samInShireId]: theShireId,
@@ -250,12 +253,10 @@ describe('Movement Logic', () => {
       });
 
       const aragorn = gameState.getCharacterById(aragornId)!;
-      const theShireRegion = gameState.getRegionModel(theShireId)!;
+      const theShireRegion = gameState.getRegionModel(theShireId)!; // Fetch from new gameState
 
-      // Verify The Shire is full for Fellowship
-      const occupantsInShire = gameState.getCharactersInRegion(theShireId);
       let fellowshipCount = 0;
-      occupantsInShire.forEach(charId => {
+      gameState.getCharactersInRegion(theShireId).forEach(charId => {
         const char = gameState.getCharacterById(charId);
         if (char && char.faction === 'Fellowship' && !char.is_defeated) {
           fellowshipCount++;
@@ -268,23 +269,20 @@ describe('Movement Logic', () => {
     });
 
     test('should return true if region is at capacity for other faction but not character\'s faction', () => {
-      // Mordor, capacity 4 for Sauron. Fill with 4 Sauron units.
-      // Frodo (Fellowship) tries to enter. Capacity for Fellowship in Mordor is also 4 (factionCapacity).
       const sauronChar3Id = mockGameData.characters.find(c => c.faction === 'Sauron' && ![witchKingId, sarumanId, sauronChar1Id, sauronChar2Id].includes(c.id))!.id;
-      const sauronChar4Id = mockGameData.characters.find(c => c.faction === 'Sauron' && ![witchKingId, sarumanId, sauronChar1Id, sauronChar2Id, sauronChar3Id].includes(c.id))!.id;
+      // const sauronChar4Id = ... // Not strictly needed for this test logic
 
-      gameState = createRichMockGameState({
+      gameState = createRichMockGameState({ // REBIND gameState
         [witchKingId]: mordorId,
         [sarumanId]: mordorId,
         [sauronChar1Id]: mordorId,
         [sauronChar2Id]: mordorId,
-        [frodoId]: dagorladId, // Frodo in Dagorlad, adjacent to Mordor
+        [frodoId]: dagorladId, 
       });
 
       const frodo = gameState.getCharacterById(frodoId)!;
-      const mordorRegion = gameState.getRegionModel(mordorId)!;
+      const mordorRegion = gameState.getRegionModel(mordorId)!; // Fetch from new gameState
       
-      // Verify Mordor is full for Sauron
       let sauronCountInMordor = 0;
       gameState.getCharactersInRegion(mordorId).forEach(charId => {
         const char = gameState.getCharacterById(charId);
@@ -292,7 +290,6 @@ describe('Movement Logic', () => {
       });
       expect(sauronCountInMordor).toBe(mordorRegion.getCapacity('Sauron'));
 
-      // Fellowship count in Mordor is 0, capacity is 4. So Frodo should be able to enter.
       const canEnter = canEnterRegion(frodo, mordorRegion, gameState);
       expect(canEnter).toBe(true);
     });

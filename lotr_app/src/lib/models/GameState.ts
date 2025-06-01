@@ -14,7 +14,7 @@ export class GameState {
   public gameLog: string[];
   public battleHistory: any[]; // Added for battle outcomes
   public revealedCharacters: Set<string>; // Added to track revealed characters
-  public characterLocations: Map<string, string>; // Added for character locations (characterId -> regionId)
+  // public characterLocations: Map<string, string>; // REMOVED - location is on CharacterModel
   public activeBattle: any | null; // Added for ongoing battle state
   public lastMove: any | null; // Added to store last move data
   public gameOver: boolean; // Added explicit gameOver flag
@@ -39,7 +39,7 @@ export class GameState {
     this.gameLog = [];
     this.battleHistory = []; // Initialize battleHistory
     this.revealedCharacters = new Set<string>(); // Initialize revealedCharacters
-    this.characterLocations = new Map<string, string>(); // Initialize characterLocations
+    // this.characterLocations = new Map<string, string>(); // REMOVED
     this.activeBattle = null; // Initialize activeBattle
     this.lastMove = null; // Initialize lastMove
     this.gameOver = false; // Initialize gameOver
@@ -107,20 +107,6 @@ export class GameState {
     return this.revealedCharacters.has(characterId);
   }
 
-  public setCharacterLocation(characterId: string, regionId: string | null): void {
-    if (regionId === null) {
-      this.characterLocations.delete(characterId);
-      this.log(`Character ${characterId} location removed.`);
-    } else {
-      this.characterLocations.set(characterId, regionId);
-      this.log(`Character ${characterId} moved to region ${regionId}.`);
-    }
-  }
-
-  public getCharacterLocation(characterId: string): string | undefined {
-    return this.characterLocations.get(characterId);
-  }
-
   public getTurn(): number {
     return this.turn;
   }
@@ -142,7 +128,13 @@ export class GameState {
   }
 
   public getCharactersInRegion(regionId: string): string[] {
-    return this.regionStates.get(regionId)?.characters || [];
+    const charactersInRegion: string[] = [];
+    for (const char of this.characterInstances.values()) {
+      if (char.locationId === regionId && !char.is_defeated) {
+        charactersInRegion.push(char.id);
+      }
+    }
+    return charactersInRegion;
   }
 
   public getCharacterById(characterId: string): CharacterModel | undefined {
@@ -225,7 +217,7 @@ export class GameState {
       gameLog: this.gameLog, // Now includes 'Game state saved.'
       battleHistory: this.battleHistory,
       revealedCharacters: Array.from(this.revealedCharacters),
-      characterLocations: Array.from(this.characterLocations.entries()),
+      // characterLocations: Array.from(this.characterLocations.entries()), // REMOVED
       activeBattle: this.activeBattle,
       lastMove: this.lastMove,
       gameOver: this.gameOver,
@@ -246,7 +238,7 @@ export class GameState {
     this.gameLog = savedState.gameLog; // Overwrite with saved log
     this.battleHistory = savedState.battleHistory;
     this.revealedCharacters = new Set(savedState.revealedCharacters);
-    this.characterLocations = new Map(savedState.characterLocations);
+    // this.characterLocations = new Map(savedState.characterLocations); // REMOVED
     this.activeBattle = savedState.activeBattle;
     this.lastMove = savedState.lastMove;
     this.gameOver = savedState.gameOver;
