@@ -34,8 +34,8 @@
   - [x] 1.5 Set up folder structure (/lib, /components, /data, /tests)
 
 - [ ] 2.0 Implement Game State Management System
-  - [ ] 2.1 Create GameState class with turn tracking, phase management, and player state
-  - [ ] 2.2 Implement Character class with concealment mechanics (reveal/conceal methods)
+  - [x] 2.1 Create GameState class with turn tracking, phase management, and player state
+  - [x] 2.2 Implement Character class with concealment mechanics (reveal/conceal methods)
   - [ ] 2.3 Build Region class with capacity checking and occupant tracking
   - [ ] 2.4 Create Player class with hand, deck, and discard pile management
   - [ ] 2.5 Implement hand reclaim system (when both players have 9 discards)
