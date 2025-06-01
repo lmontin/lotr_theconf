@@ -15,6 +15,7 @@
 - `lotr_app/src/app/game/page.tsx` - Main game page
 - `lotr_app/jest.config.ts` - Jest configuration file
 - `lotr_app/jest.setup.ts` - Jest setup file for additional configurations
+- `lotr_app/src/types/data.ts` - TypeScript interfaces for static game data
 
 ### Notes
 
@@ -26,8 +27,8 @@
 
 - [x] 1.0 Set Up Project Structure and Core Data Models
   - [x] 1.1 Initialize Next.js project with TypeScript and install dependencies (React, Tailwind CSS, Jest)
-  - [ ] 1.2 Create TypeScript interfaces for static data types (IRegion, ICharacter, ICombatCard)
-  - [ ] 1.3 Fix gamedata.json issues (typos, missing adjacencies, capacity data)
+  - [x] 1.2 Create TypeScript interfaces for static data types (IRegion, ICharacter, ICombatCard)
+  - [x] 1.3 Fix gamedata.json issues (typos, missing adjacencies, capacity data)
   - [ ] 1.4 Create data validation utility to ensure gamedata.json integrity
   - [ ] 1.5 Set up folder structure (/lib, /components, /data, /tests)
 
