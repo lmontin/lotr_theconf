@@ -16,21 +16,12 @@ const GamePage: React.FC = () => {
     // Initialize GameState on the client side
     const newGameState = new GameState(gameData);
     
-    // Initial character placements
-    // Fellowship starting positions
-    newGameState.placeCharacter("char_frodo", "REGION_SHIRE");
-    newGameState.placeCharacter("char_gandalf", "REGION_SHIRE");
-    newGameState.placeCharacter("char_aragorn", "REGION_RIVENDELL");
-    newGameState.placeCharacter("char_boromir", "REGION_ROHAN"); 
-    newGameState.placeCharacter("char_legolas", "REGION_LORIEN");
-    newGameState.placeCharacter("char_gimli", "REGION_EREBOR"); 
-    // Sauron starting positions
-    newGameState.placeCharacter("char_witch_king", "REGION_MINAS_MORGUL");
-    newGameState.placeCharacter("char_saruman", "REGION_ISENGARD");
-    newGameState.placeCharacter("char_mouth_of_sauron", "REGION_MORDOR");
+    // Call the random placement function for each faction
+    newGameState.randomlyPlaceFactionCharacters('Fellowship');
+    newGameState.randomlyPlaceFactionCharacters('Sauron');
 
     setGameState(newGameState);
-    console.log("GameState initialized and initial characters placed:", newGameState);
+    console.log("GameState initialized and characters randomly placed:", newGameState);
   }, []); // Empty dependency array ensures this runs once on mount
 
   const handleGameUpdate = () => {

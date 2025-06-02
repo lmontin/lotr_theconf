@@ -94,11 +94,11 @@ describe('GameState', () => {
   });
 
   it('should manage character locations', () => {
-    expect(gameState.getCharacterLocation('char1')).toBeUndefined();
+    expect(gameState.getCharacterLocation('char1')).toBeNull(); // MODIFIED: Expect null for uninitialized location
     gameState.setCharacterLocation('char1', 'region1');
     expect(gameState.getCharacterLocation('char1')).toBe('region1');
     gameState.setCharacterLocation('char1', null); // Remove location
-    expect(gameState.getCharacterLocation('char1')).toBeUndefined();
+    expect(gameState.getCharacterLocation('char1')).toBeNull(); // MODIFIED: Expect null after removal
   });
 
   it('should save and load game state', () => {

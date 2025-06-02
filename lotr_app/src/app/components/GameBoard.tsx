@@ -164,7 +164,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onGameUpdate }) => {
                         <CharacterPiece
                           key={char.id}
                           character={char}
-                          onClick={(e) => { e.stopPropagation(); handleCharacterClick(char.id); }}
+                          onClick={(e, charId) => { e.stopPropagation(); handleCharacterClick(charId); }} // Modified to use charId from callback
                           isSelected={char.id === selectedCharacterId}
                         />
                       ))
@@ -185,7 +185,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onGameUpdate }) => {
           <CharacterPiece
             key={char.id}
             character={char}
-            onClick={() => handleCharacterClick(char.id)} // Direct click, no stopPropagation needed here
+            onClick={(_e, charId) => handleCharacterClick(charId)} // Modified to use charId, _e as event is not used here for stopPropagation
             isSelected={char.id === selectedCharacterId}
           />
         ))}

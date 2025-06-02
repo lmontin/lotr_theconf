@@ -28,7 +28,7 @@ const createRichMockGameState = (): GameState => {
       else if (charData.id === 'CHAR_SAURON_FLYING_NAZGUL') startingRegionId = 'REGION_DAGORLAD';
 
       if (startingRegionId) {
-        const regionExists = gameState.getRegionModel(startingRegionId);
+        const regionExists = gameState.getRegionById(startingRegionId);
         if (regionExists) {
             charModel.setLocation(startingRegionId, true);
         } else {
@@ -66,11 +66,11 @@ describe('Movement Logic', () => {
       witchKing.setLocation(mirkwoodId, true);
 
       const legalMoves = getLegalMoves(witchKing, gameState);
-      const mirkwoodRegion = gameState.getRegionModel(mirkwoodId)!;
+      const mirkwoodRegion = gameState.getRegionById(mirkwoodId)!;
       const expectedDestinations = mirkwoodRegion.sauronAdjacent || []; 
 
       const enterableExpectedDestinations = expectedDestinations.filter(destId => {
-        const destRegionModel = gameState.getRegionModel(destId);
+        const destRegionModel = gameState.getRegionById(destId);
         return destRegionModel && canEnterRegion(witchKing, destRegionModel, gameState);
       });
 

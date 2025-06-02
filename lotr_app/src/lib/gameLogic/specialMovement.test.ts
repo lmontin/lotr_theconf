@@ -30,8 +30,8 @@ describe('Special Movement Deep Dive', () => {
     it('should correctly identify TUNNEL move and log relevant data', () => {
       const gameState = createMinimalGameState();
       const aragorn = gameState.getCharacterById('CHAR_FELLOWSHIP_ARAGORN')!;
-      const eregion = gameState.getRegionModel('REGION_EREGION')!;
-      const fangorn = gameState.getRegionModel('REGION_FANGORN')!;
+      const eregion = gameState.getRegionById('REGION_EREGION')!;
+      const fangorn = gameState.getRegionById('REGION_FANGORN')!;
 
       console.log('--- TUNNEL Test: Initial State ---');
       console.log('Aragorn Location:', aragorn.getLocation());
@@ -68,8 +68,8 @@ describe('Special Movement Deep Dive', () => {
       const aragorn = gameState.getCharacterById('CHAR_FELLOWSHIP_ARAGORN')!;
       
       // It's crucial to get the *models* from the gameState as these are the instances used by the logic
-      const eregionModel = gameState.getRegionModel('REGION_EREGION')! as RegionModel & { special?: string | string[] };
-      const fangornModel = gameState.getRegionModel('REGION_FANGORN')! as RegionModel & { special?: string | string[] };
+      const eregionModel = gameState.getRegionById('REGION_EREGION')! as RegionModel & { special?: string | string[] };
+      const fangornModel = gameState.getRegionById('REGION_FANGORN')! as RegionModel & { special?: string | string[] };
 
       console.log('--- RIVER Test: Initial State (Before Modification) ---');
       console.log('Aragorn Location:', aragorn.getLocation());

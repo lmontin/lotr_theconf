@@ -76,7 +76,7 @@ export class GameState {
   }
 
   public log(message: string): void {
-    console.log(message);
+    // console.log(message); // Commented out to reduce test noise
     this.gameLog.push(`[Turn ${this.turn} - ${this.currentPlayer} - ${this.currentPhase}]: ${message}`);
   }
 
@@ -100,21 +100,40 @@ export class GameState {
     return this.characterInstances.get(characterId);
   }
 
-  public getAllCharacters(): CharacterModel[] {
-    return Array.from(this.characterInstances.values());
+  public isCharacterRevealed(characterId: string): boolean { // Added method
+    return this.revealedCharacters.has(characterId);
   }
 
-  public getAllRegions(): RegionModel[] {
-    return Array.from(this.regionModels.values());
+  public removeRevealedCharacter(characterId: string): void { // Added method
+    this.revealedCharacters.delete(characterId);
+    this.log(`Character ${characterId} concealed.`);
   }
 
-  // Example of how to get a region by ID, if needed later
+  public getCharacterLocation(characterId: string): string | null | undefined { // Added method
+    const character = this.getCharacterById(characterId);
+    return character?.getLocation();
+  }
+
+  public setCharacterLocation(characterId: string, regionId: string | null): void { // Added method
+    const character = this.getCharacterById(characterId);
+    if (character) {
+      character.setLocation(regionId);
+      if (regionId) {
+        this.log(`Character ${character.name} location set to ${regionId}`);
+      } else {
+        this.log(`Character ${character.name} location cleared.`);
+      }
+    } else {
+      this.log(`Attempted to set location for non-existent character ${characterId}`);
+    }
+  }
+
   public getRegionById(regionId: string): RegionModel | undefined {
     return this.regionModels.get(regionId);
   }
 
   // Placeholder for advancing turn and phase
-  public advancePhase(): void {
+  public nextPhase(): void { // Renamed from advancePhase to match test usage
     // Basic phase progression logic (can be expanded)
     switch (this.currentPhase) {
       case 'SETUP':
@@ -153,11 +172,37 @@ export class GameState {
     // Example condition: Sauron wins if Frodo is corrupted or captured
     // Example condition: Fellowship wins if the One Ring is destroyed
     // This needs to be implemented based on specific game rules
-    if (this.turn > 20) { // Example: Game ends after 20 turns (placeholder)
-        this.winner = 'Draw'; // Or determine winner based on victory points
-        this.currentPhase = 'GAME_OVER';
-        this.gameOver = true;
+    if (!this.gameOver && this.turn > 20) { // MODIFIED: Check if gameOver is not already true
+        this.setWinner('Draw');
         this.log('Game Over. Max turns reached.');
+    }
+  }
+
+  public setWinner(winner: Faction | 'Draw'): void {
+    if (!this.gameOver) { // MODIFIED: Only set winner if game is not already over
+      this.winner = winner;
+      this.gameOver = true;
+      this.currentPhase = 'GAME_OVER';
+      this.log(`Game Over. Winner: ${winner}`);
+    } else {
+      this.log(`Attempted to set winner to ${winner}, but game is already over. Winner remains ${this.winner}`);
+    }
+  }
+
+  public checkAndTriggerHandReclaim(): void { // Added method
+    const fellowshipDiscards = this.fellowshipPlayer.discard.length;
+    const sauronDiscards = this.sauronPlayer.discard.length;
+
+    if (fellowshipDiscards >= 9 && sauronDiscards >= 9) {
+      this.log('Hand reclaim triggered for both players.');
+      this.fellowshipPlayer.reclaimHand();
+      this.sauronPlayer.reclaimHand();
+    } else if (fellowshipDiscards >= 9) {
+      this.log('Fellowship player has 9+ discards, but Sauron player does not. No reclaim.');
+    } else if (sauronDiscards >= 9) {
+      this.log('Sauron player has 9+ discards, but Fellowship player does not. No reclaim.');
+    } else {
+      // this.log('Neither player has enough discards for hand reclaim.');
     }
   }
 
@@ -207,6 +252,53 @@ export class GameState {
         // Potentially trigger other game events here (e.g., revealing character, battle)
         return true;
     }
+
+  public randomlyPlaceFactionCharacters(faction: Faction): void {
+    this.log(`Attempting to randomly place characters for ${faction}.`);
+    const unplacedCharacters = Array.from(this.characterInstances.values()).filter(
+      char => char.faction === faction && !char.getLocation()
+    );
+
+    if (unplacedCharacters.length === 0) {
+      this.log(`No unplaced characters for ${faction} to place.`);
+      return;
+    }
+
+    const factionStartingRegions = Array.from(this.regionModels.values()).filter(region => {
+      const capacity = faction === 'Fellowship' ? region.capacity.Fellowship : region.capacity.Sauron;
+      return capacity && capacity > 0;
+    });
+
+    if (factionStartingRegions.length === 0) {
+      this.log(`No starting regions found for ${faction}. Cannot place characters.`);
+      return;
+    }
+
+    this.log(`Found ${unplacedCharacters.length} unplaced characters for ${faction}.`);
+    this.log(`Found ${factionStartingRegions.length} potential starting regions for ${faction}.`);
+
+    for (const character of unplacedCharacters) {
+      // Filter regions that still have capacity for this faction
+      const availableRegions = factionStartingRegions.filter(region => {
+        const factionOccupantsCount = region.getOccupants(faction).length;
+        const capacity = faction === 'Fellowship' ? region.capacity.Fellowship : region.capacity.Sauron;
+        return capacity && factionOccupantsCount < capacity;
+      });
+
+      if (availableRegions.length === 0) {
+        this.log(`No available starting regions with capacity for ${character.name} (${faction}). Skipping placement.`);
+        continue; // Skip this character if no suitable region is found
+      }
+
+      // Select a random region from the available ones
+      const randomRegionIndex = Math.floor(Math.random() * availableRegions.length);
+      const selectedRegion = availableRegions[randomRegionIndex];
+
+      this.placeCharacter(character.id, selectedRegion.id);
+      // placeCharacter already logs the placement
+    }
+    this.log(`Finished random placement for ${faction}.`);
+  }
 
 
   // Getters for basic game state information

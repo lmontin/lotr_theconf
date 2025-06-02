@@ -74,21 +74,21 @@ export class CharacterModel implements ICharacter { // Changed class name to Cha
 
     if (oldRegionId === regionId) {
       if (isInitialSetup && regionId) {
-        const regionModel = this.game.getRegionModel(regionId);
+        const regionModel = this.game.getRegionById(regionId); // MODIFIED: Renamed to getRegionById
         regionModel?.addOccupant(this.id);
       }
       return;
     }
 
     if (oldRegionId) {
-      const oldRegionModel = this.game.getRegionModel(oldRegionId);
+      const oldRegionModel = this.game.getRegionById(oldRegionId); // MODIFIED: Renamed to getRegionById
       oldRegionModel?.removeOccupant(this.id);
     }
 
     this.location = regionId; 
 
     if (regionId) {
-      const newRegionModel = this.game.getRegionModel(regionId);
+      const newRegionModel = this.game.getRegionById(regionId); // MODIFIED: Renamed to getRegionById
       if (newRegionModel) {
         newRegionModel.addOccupant(this.id);
       } else {
@@ -97,7 +97,7 @@ export class CharacterModel implements ICharacter { // Changed class name to Cha
       }
     } else {
       if (!isInitialSetup && oldRegionId) { 
-          const oldRegionName = this.game.getRegionModel(oldRegionId)?.name || 'unknown region';
+          const oldRegionName = this.game.getRegionById(oldRegionId)?.name || 'unknown region'; // MODIFIED: Renamed to getRegionById
           this.game.log(`${this.name} was removed from the board (was in ${oldRegionName}).`);
       }
     }
@@ -115,7 +115,7 @@ export class CharacterModel implements ICharacter { // Changed class name to Cha
             this.game.log(`${this.name} has been defeated.`);
             // Remove from current region if defeated and on board
             if (this.location) {
-                const currentRegion = this.game.getRegionModel(this.location);
+                const currentRegion = this.game.getRegionById(this.location); // MODIFIED: Renamed to getRegionById
                 currentRegion?.removeOccupant(this.id);
                 // Consider if location should be set to null here or by calling setLocation(null)
                 // For now, just removing from occupants. Game logic might explicitly move them.

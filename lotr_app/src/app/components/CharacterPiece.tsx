@@ -5,16 +5,16 @@ import { CharacterModel } from '@/lib/models/Character';
 
 interface CharacterPieceProps {
   character: CharacterModel;
-  onClick?: (characterId: string) => void;
+  onClick?: (event: React.MouseEvent<HTMLDivElement>, characterId: string) => void; // Modified onClick signature
   isSelected?: boolean;
 }
 
 const CharacterPiece: React.FC<CharacterPieceProps> = ({ character, onClick, isSelected }) => {
   const { id, name, faction, is_revealed } = character;
 
-  const handleClick = () => {
+  const handleClick = (event: React.MouseEvent<HTMLDivElement>) => { // Added event parameter
     if (onClick) {
-      onClick(id);
+      onClick(event, id); // Pass event and id
     }
   };
 

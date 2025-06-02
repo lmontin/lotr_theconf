@@ -54,7 +54,7 @@
 - [x] 4.0 Create Web UI Components and Game Interface 
   - [x] 4.1 Build GameBoard component with region layout matching the game board 
   - [x] 4.2 Create CharacterPiece component with concealment display (hidden/revealed states) 
-  - [ ] 4.3 Implement drag-and-drop or click-to-move movement interface 
+  - [x] 4.3 Implement drag-and-drop or click-to-move movement interface 
 
 - [ ] 5.0 Build Battle Resolution System 
   - [ ] 5.1 Build 4-step battle resolution system (reveal, abilities, cards, strength comparison) 

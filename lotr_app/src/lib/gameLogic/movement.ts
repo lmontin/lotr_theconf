@@ -50,7 +50,7 @@ export function getLegalMoves(character: Character, gameState: GameState, contex
     return moves;
   }
 
-  const currentRegionModel = gameState.getRegionModel(characterLocation);
+  const currentRegionModel = gameState.getRegionById(characterLocation); // MODIFIED
   if (!currentRegionModel) {
     gameState.log(`Error: Current region for ${character.name} (${character.id}) not found.`);
     return moves;
@@ -60,7 +60,7 @@ export function getLegalMoves(character: Character, gameState: GameState, contex
   const forwardRegionIds = character.faction === ("Fellowship" as Faction) ? currentRegionModel.fellowshipAdjacent : currentRegionModel.sauronAdjacent;
   if (forwardRegionIds) {
     for (const destId of forwardRegionIds) {
-      const destRegionModel = gameState.getRegionModel(destId);
+      const destRegionModel = gameState.getRegionById(destId); // MODIFIED
       if (destRegionModel) {
         if (canEnterRegion(character, destRegionModel, gameState)) {
           moves.push({ type: 'FORWARD' as MoveType, destinationRegionId: destId });
@@ -81,7 +81,7 @@ export function getLegalMoves(character: Character, gameState: GameState, contex
 
     if (currentRegionModel.fellowshipSpecialMovement) {
         for (const specialDestId of currentRegionModel.fellowshipSpecialMovement) {
-            const specialDestRegionModel = gameState.getRegionModel(specialDestId);
+            const specialDestRegionModel = gameState.getRegionById(specialDestId); // MODIFIED
 
             if (currentRegionModel.id === 'REGION_EREGION') { // Log loop processing for Eregion
                 gameState.log(`DIAGNOSTIC (Eregion Special Loop): Processing specialDestId: ${specialDestId}. Target Model Found: ${!!specialDestRegionModel}. Character: ${character.name}`);
@@ -168,7 +168,7 @@ export function moveCharacter(
     return false;
   }
 
-  const destinationRegionModel = gameState.getRegionModel(destinationRegionId);
+  const destinationRegionModel = gameState.getRegionById(destinationRegionId); // MODIFIED
   if (!destinationRegionModel) {
     gameState.log(`MOVE FAIL: ${characterModel.name} to ${destinationRegionId} - Destination region not found.`);
     return false;
@@ -180,7 +180,7 @@ export function moveCharacter(
   }
 
   const oldRegionId = characterModel.getLocation();
-  const oldRegionName = oldRegionId ? gameState.getRegionModel(oldRegionId)?.name : 'off-board';
+  const oldRegionName = oldRegionId ? gameState.getRegionById(oldRegionId)?.name : 'off-board'; // MODIFIED
 
   characterModel.setLocation(destinationRegionId);
 
