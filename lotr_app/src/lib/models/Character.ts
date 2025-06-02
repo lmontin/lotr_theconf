@@ -74,35 +74,22 @@ export class CharacterModel implements ICharacter { // Changed class name to Cha
     const oldRegionName = oldRegionId ? this.game.getRegionById(oldRegionId)?.name : 'off the board';
 
     if (oldRegionId === regionId) {
-      if (isInitialSetup && regionId) {
-        const regionModel = this.game.getRegionById(regionId); // MODIFIED: Renamed to getRegionById
-        regionModel?.addOccupant(this.id);
-      }
       return;
     }
 
-    if (oldRegionId) {
-      const oldRegionModel = this.game.getRegionById(oldRegionId); // MODIFIED: Renamed to getRegionById
-      oldRegionModel?.removeOccupant(this.id);
-    }
-
-    this.location = regionId; 
+    this.location = regionId;
 
     if (regionId) {
-      const newRegionModel = this.game.getRegionById(regionId); // MODIFIED: Renamed to getRegionById
-      if (newRegionModel) {
-        newRegionModel.addOccupant(this.id);
-        if (!isInitialSetup) { // Avoid logging initial placement as a "move"
-            this.game.log(`${this.name} moved from ${oldRegionName || 'unknown region'} to ${newRegionModel.name}.`);
-        }
-      } else {
+      const newRegionModel = this.game.getRegionById(regionId);
+      if (newRegionModel && !isInitialSetup) {
+        this.game.log(`${this.name} moved from ${oldRegionName || 'unknown region'} to ${newRegionModel.name}.`);
+      } else if (!newRegionModel) {
         this.game.log(`Error: Attempted to set location for ${this.name} to non-existent region ${regionId}. Location cleared.`);
-        this.location = null; 
+        this.location = null;
       }
     } else {
-      if (!isInitialSetup && oldRegionId) { 
-          // const oldRegionName = this.game.getRegionById(oldRegionId)?.name || 'unknown region'; // MODIFIED: Renamed to getRegionById
-          this.game.log(`${this.name} was removed from the board (was in ${oldRegionName}).`);
+      if (!isInitialSetup && oldRegionId) {
+        this.game.log(`${this.name} was removed from the board (was in ${oldRegionName}).`);
       }
     }
   }

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import GameBoard from '../components/GameBoard';
 import { GameState } from '@/lib/models/GameState'; // Adjusted path
-import rawGameData from '../../../data/gamedata.json'; // Path to gameData
+import rawGameData from '@/data/gameData.json'; // Path to gameData (fixed)
 import { IGameData } from '@/types/data'; // Type for gameData
 
 const gameData: IGameData = rawGameData as IGameData;

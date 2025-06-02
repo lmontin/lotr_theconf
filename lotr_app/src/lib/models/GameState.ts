@@ -1,12 +1,75 @@
+
 import { ICharacter, IRegion, ICombatCard } from '../../types/data';
+
 import { Player } from './Player';
-import { CharacterModel } from './Character'; // Corrected: Assuming Character.ts exports CharacterModel directly
-import { RegionModel } from './Region'; // Reverted to standard named import
+import { CharacterModel } from './Character';
+import { RegionModel } from './Region';
+
+// --- Lightweight in-memory region/character mapping ---
+type CharacterId = string;
+type RegionId = string;
+
+class LightweightRegionCharacterIndex {
+  // single source of truth: char_id -> region_id
+  private charRegion: Map<CharacterId, RegionId> = new Map();
+  // eager reverse index: region_id -> Set<char_id>
+  private regionChars: Map<RegionId, Set<CharacterId>> = new Map();
+
+  addCharacter(charId: CharacterId, regionId: RegionId): void {
+    if (this.charRegion.has(charId)) {
+      throw new Error(`${charId} already on the board`);
+    }
+    this.charRegion.set(charId, regionId);
+    if (!this.regionChars.has(regionId)) {
+      this.regionChars.set(regionId, new Set());
+    }
+    this.regionChars.get(regionId)!.add(charId);
+  }
+
+  moveCharacter(charId: CharacterId, newRegion: RegionId): void {
+    const oldRegion = this.charRegion.get(charId);
+    if (!oldRegion) throw new Error(`${charId} not on the board`);
+    if (oldRegion === newRegion) return;
+    this.charRegion.set(charId, newRegion);
+    this.regionChars.get(oldRegion)!.delete(charId);
+    if (this.regionChars.get(oldRegion)!.size === 0) {
+      this.regionChars.delete(oldRegion);
+    }
+    if (!this.regionChars.has(newRegion)) {
+      this.regionChars.set(newRegion, new Set());
+    }
+    this.regionChars.get(newRegion)!.add(charId);
+  }
+
+  removeCharacter(charId: CharacterId): void {
+    const regionId = this.charRegion.get(charId);
+    if (regionId) {
+      this.regionChars.get(regionId)?.delete(charId);
+      if (this.regionChars.get(regionId)?.size === 0) {
+        this.regionChars.delete(regionId);
+      }
+    }
+    this.charRegion.delete(charId);
+  }
+
+  regionOf(charId: CharacterId): RegionId | undefined {
+    return this.charRegion.get(charId);
+  }
+
+  charactersIn(regionId: RegionId): Set<CharacterId> {
+    return this.regionChars.get(regionId) ?? new Set();
+  }
+}
 
 export type GamePhase = 'SETUP' | 'FELLOWSHIP_MOVE' | 'FELLOWSHIP_ACTION' | 'SAURON_MOVE' | 'SAURON_ACTION' | 'UPKEEP' | 'GAME_OVER';
 export type Faction = 'Fellowship' | 'Sauron';
 
 export class GameState {
+  // --- Add setActiveBattle for test compatibility ---
+  public setActiveBattle(battle: any): void {
+    this.activeBattle = battle;
+    this.log(`Active battle set: ${JSON.stringify(battle)}`);
+  }
   private turn: number;
   private currentPhase: GamePhase;
   private currentPlayer: Faction;
@@ -27,9 +90,11 @@ export class GameState {
   private combatCardsData: ICombatCard[];
 
   // private regionStates: Map<string, { region: IRegion; characters: string[] }>; // MODIFIED
-  private regionModels: Map<string, RegionModel>; // MODIFIED: Store RegionModel instances
 
+  private regionModels: Map<string, RegionModel>; // MODIFIED: Store RegionModel instances
   private characterInstances: Map<string, CharacterModel>; // To store Character instances
+  // --- Lightweight index ---
+  private regionCharIndex: LightweightRegionCharacterIndex = new LightweightRegionCharacterIndex();
 
   constructor(gameData: { characters: ICharacter[], regions: IRegion[], combatCards: ICombatCard[] }) {
     this.turn = 1;
@@ -70,8 +135,7 @@ export class GameState {
     charactersData.forEach(charData => {
       const character = new CharacterModel(charData, this);
       this.characterInstances.set(charData.id, character);
-      // Initial placement can be done here or by a separate setup method
-      // For now, characters are created but not placed on the board by default
+      // Characters are created but not placed on the board by default
     });
   }
 
@@ -114,17 +178,23 @@ export class GameState {
     return character?.getLocation();
   }
 
-  public setCharacterLocation(characterId: string, regionId: string | null): void { // Added method
+  public setCharacterLocation(characterId: string, regionId: string | null): void {
     const character = this.getCharacterById(characterId);
-    if (character) {
-      character.setLocation(regionId);
-      if (regionId) {
-        this.log(`Character ${character.name} location set to ${regionId}`);
-      } else {
-        this.log(`Character ${character.name} location cleared.`);
-      }
-    } else {
+    if (!character) {
       this.log(`Attempted to set location for non-existent character ${characterId}`);
+      return;
+    }
+    const oldRegion = this.regionCharIndex.regionOf(characterId);
+    if (oldRegion) {
+      this.regionCharIndex.removeCharacter(characterId);
+    }
+    if (regionId) {
+      this.regionCharIndex.addCharacter(characterId, regionId);
+      character.setLocation(regionId);
+      this.log(`Character ${character.name} location set to ${regionId}`);
+    } else {
+      character.setLocation(null);
+      this.log(`Character ${character.name} location cleared.`);
     }
   }
 
@@ -224,13 +294,14 @@ export class GameState {
   public placeCharacter(characterId: string, regionId: string): boolean {
     const character = this.characterInstances.get(characterId);
     const region = this.regionModels.get(regionId);
-
     if (character && region) {
-      // Remove character from previous region if any
-      this.regionModels.forEach(r => r.removeOccupant(characterId)); // MODIFIED: Renamed to removeOccupant
-      // Add character to new region
-      region.addOccupant(character.id); // MODIFIED: Renamed to addOccupant and pass ID
-      character.setLocation(regionId); // MODIFIED: Renamed to setLocation
+      // Remove from previous region in index
+      const oldRegion = this.regionCharIndex.regionOf(characterId);
+      if (oldRegion) {
+        this.regionCharIndex.removeCharacter(characterId);
+      }
+      this.regionCharIndex.addCharacter(characterId, regionId);
+      character.setLocation(regionId);
       this.log(`Placed character ${character.name} in region ${region.name}`);
       return true;
     }
@@ -242,7 +313,6 @@ export class GameState {
     public moveCharacter(characterId: string, toRegionId: string): boolean {
         const character = this.getCharacterById(characterId);
         const toRegion = this.getRegionById(toRegionId);
-
         if (!character) {
             this.log(`Move failed: Character ${characterId} not found.`);
             return false;
@@ -251,21 +321,25 @@ export class GameState {
             this.log(`Move failed: Target region ${toRegionId} not found.`);
             return false;
         }
-
-        const fromRegionId = character.getLocation(); // MODIFIED: Renamed to getLocation
+        const fromRegionId = this.regionCharIndex.regionOf(characterId);
         if (fromRegionId) {
-            const fromRegion = this.getRegionById(fromRegionId);
-            if (fromRegion) {
-                fromRegion.removeOccupant(characterId); // MODIFIED: Renamed to removeOccupant
-            }
+            this.regionCharIndex.moveCharacter(characterId, toRegionId);
+        } else {
+            this.regionCharIndex.addCharacter(characterId, toRegionId);
         }
-
-        toRegion.addOccupant(character.id); // MODIFIED: Renamed to addOccupant and pass ID
-        character.setLocation(toRegionId); // MODIFIED: Renamed to setLocation
+        character.setLocation(toRegionId);
         this.log(`Character ${character.name} moved to ${toRegion.name}.`);
         // Potentially trigger other game events here (e.g., revealing character, battle)
         return true;
     }
+  // --- New region/character view helpers ---
+  public regionOf(characterId: string): string | undefined {
+    return this.regionCharIndex.regionOf(characterId);
+  }
+
+  public charactersIn(regionId: string): Set<string> {
+    return this.regionCharIndex.charactersIn(regionId);
+  }
 
   public randomlyPlaceFactionCharacters(faction: Faction): void {
     this.log(`Attempting to randomly place characters for ${faction}.`);
