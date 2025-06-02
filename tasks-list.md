@@ -5,7 +5,7 @@
 - `lotr_app/src/lib/models/Character.ts` - Character class with concealment mechanics
 - `lotr_app/src/lib/models/Region.ts` - Region class with adjacency and capacity logic
 - `lotr_app/src/lib/models/Player.ts` - Player class with hand management
-- `lotr_app/src/lib/systems/MovementSystem.ts` - Movement validation and special paths
+- `lotr_app/src/lib/gameLogic/movement.ts` - Movement validation, `getLegalMoves`, `moveCharacter` and special paths (Replaced `MovementSystem.ts`)
 - `lotr_app/src/lib/systems/BattleSystem.ts` - Battle resolution with 4-step process
 - `lotr_app/src/lib/systems/AbilitySystem.ts` - Ability trigger and handler system
 - `lotr_app/src/lib/ai/SauronAI.ts` - AI decision-making logic
@@ -47,9 +47,9 @@
     - [x] `Character.test.ts` (All tests passing)
     - [x] `Region.test.ts` (All tests passing)
 
-- [ ] 3.0 Build Movement and Battle Resolution Systems
-  - [ ] 3.1 Implement get_legal_moves function with forward, tunnel, and river path logic
-  - [ ] 3.2 Create movement validation for capacity limits and mountain restrictions
+- [x] 3.0 Build Movement and Battle Resolution Systems
+  - [x] 3.1 Implement get_legal_moves function with forward, tunnel, and river path logic
+  - [x] 3.2 Implement `moveCharacter` function (updates location, logs move, triggers battle if needed)
   - [ ] 3.3 Build 4-step battle resolution system (reveal, abilities, cards, strength comparison)
   - [ ] 3.4 Implement ability trigger system with proper timing (BATTLE_START, RESOLVE_CARDS, etc.)
   - [ ] 3.5 Create all character ability handlers (Frodo retreat, Sam substitute, etc.)

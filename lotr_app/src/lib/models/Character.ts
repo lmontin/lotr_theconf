@@ -1,24 +1,29 @@
-import { ICharacter, ICharacterVersion, ICharacterAbility } from '../../types/data';
-import { GameState } from './GameState'; // Assuming GameState is in the same directory
-import { Faction } from './GameState'; // Import Faction type
+import { ICharacter, ICharacterVersion, ICharacterAbility, Faction } from '../../types/data'; // Corrected path and added Faction
+import { GameState } from './GameState';
 
-export class Character {
+export class CharacterModel implements ICharacter { // Changed class name to CharacterModel to match usage
   public readonly id: string;
   public readonly name: string;
   public readonly faction: Faction;
+  public readonly versions: { // Added to satisfy ICharacter
+    classic?: ICharacterVersion;
+    enhanced?: ICharacterVersion;
+  };
   private currentVersionData: ICharacterVersion;
   public strength: number;
-  public isRingbearer: boolean; // Added for game logic
+  public isRingbearer: boolean; 
 
   public is_revealed: boolean;
-  public is_defeated: boolean;
-  public location: string | null; // Region ID, null if not on board
-  private game: GameState; // Reference to the game state for logging or other interactions
+  // public is_defeated: boolean; // Renamed to defeated to match usage in movement.ts
+  public defeated: boolean; // Renamed from is_defeated
+  public location: string | null; 
+  private game: GameState; 
 
   constructor(charData: ICharacter, game: GameState, version: 'classic' | 'enhanced' = 'classic') {
     this.id = charData.id;
     this.name = charData.name;
     this.faction = charData.faction;
+    this.versions = charData.versions; // Store versions
     this.game = game;
 
     const selectedVersion = charData.versions[version];
@@ -27,11 +32,11 @@ export class Character {
     }
     this.currentVersionData = selectedVersion;
     this.strength = selectedVersion.strength;
-    this.isRingbearer = false; // Default to false
+    this.isRingbearer = false; 
 
     this.is_revealed = false;
-    this.is_defeated = false;
-    this.location = null; // Character needs to be placed initially
+    this.defeated = false; // Initialized defeated
+    this.location = null; 
   }
 
   public reveal(): void {
@@ -49,39 +54,76 @@ export class Character {
   }
 
   public has_persistent_reveal(): boolean {
-    // Placeholder for abilities like Crebain that keep a character revealed
-    // e.g., check for active effects on this character in GameState
     return false;
   }
 
-  public defeat(): void {
-    if (!this.is_defeated) {
-      this.is_defeated = true;
-      this.is_revealed = true; // Defeated characters are typically revealed
-      this.game.log(`${this.name} has been defeated.`);
-      // Further logic: remove from region, move to a defeated pile, etc.
-    }
-  }
+  // public defeat(): void { // Renamed to setDefeated to match usage
+  //   if (!this.is_defeated) {
+  //     this.is_defeated = true;
+  //     this.is_revealed = true; 
+  //     this.game.log(`${this.name} has been defeated.`);
+  //   }
+  // }
 
-  public setLocation(regionId: string | null, gameState?: GameState): void { // gameState param is optional for compatibility
-    const gameInstance = gameState || this.game;
-    this.location = regionId;
-    if (regionId) {
-        gameInstance.log(`${this.name} moved to ${gameInstance.getRegion(regionId)?.name || regionId}.`);
-    } else {
-        gameInstance.log(`${this.name} was removed from the board.`);
-    }
-  }
-
-  public getCurrentVersionData(): ICharacterVersion {
-    return this.currentVersionData;
-  }
-
-  public getAbilities(): ICharacterAbility[] { // Return type updated
-    return this.currentVersionData.abilities || [];
-  }
-
-  public get locationId(): string | null {
+  public getLocation(): string | null { // Added getLocation as it was used in movement.ts
     return this.location;
+  }
+
+  public setLocation(regionId: string | null, isInitialSetup = false): void {
+    const oldRegionId = this.location;
+
+    if (oldRegionId === regionId) {
+      if (isInitialSetup && regionId) {
+        const regionModel = this.game.getRegionModel(regionId);
+        regionModel?.addOccupant(this.id);
+      }
+      return;
+    }
+
+    if (oldRegionId) {
+      const oldRegionModel = this.game.getRegionModel(oldRegionId);
+      oldRegionModel?.removeOccupant(this.id);
+    }
+
+    this.location = regionId; 
+
+    if (regionId) {
+      const newRegionModel = this.game.getRegionModel(regionId);
+      if (newRegionModel) {
+        newRegionModel.addOccupant(this.id);
+      } else {
+        this.game.log(`Error: Attempted to set location for ${this.name} to non-existent region ${regionId}. Location cleared.`);
+        this.location = null; 
+      }
+    } else {
+      if (!isInitialSetup && oldRegionId) { 
+          const oldRegionName = this.game.getRegionModel(oldRegionId)?.name || 'unknown region';
+          this.game.log(`${this.name} was removed from the board (was in ${oldRegionName}).`);
+      }
+    }
+  }
+
+  public isDefeated(): boolean { // Added isDefeated as it was used in movement.ts
+    return this.defeated;
+  }
+
+  public setDefeated(defeatedStatus: boolean): void { // Renamed from defeat and takes boolean
+    if (this.defeated !== defeatedStatus) {
+        this.defeated = defeatedStatus;
+        if (defeatedStatus) {
+            this.is_revealed = true; // Defeated characters are revealed
+            this.game.log(`${this.name} has been defeated.`);
+            // Remove from current region if defeated and on board
+            if (this.location) {
+                const currentRegion = this.game.getRegionModel(this.location);
+                currentRegion?.removeOccupant(this.id);
+                // Consider if location should be set to null here or by calling setLocation(null)
+                // For now, just removing from occupants. Game logic might explicitly move them.
+            }
+        } else {
+            // Logic for reviving a character if needed, though less common
+            this.game.log(`${this.name} is no longer defeated.`);
+        }
+    }
   }
 }
