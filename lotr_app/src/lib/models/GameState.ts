@@ -132,6 +132,20 @@ export class GameState {
     return this.regionModels.get(regionId);
   }
 
+  // Alias for getRegionById (used by tests)
+  public getRegionModel(regionId: string): RegionModel | undefined {
+    return this.getRegionById(regionId);
+  }
+
+  // Methods needed by movement tests
+  public getLastMove(): any {
+    return this.lastMove;
+  }
+
+  public getActiveBattle(): any {
+    return this.activeBattle;
+  }
+
   // Placeholder for advancing turn and phase
   public nextPhase(): void { // Renamed from advancePhase to match test usage
     // Basic phase progression logic (can be expanded)
@@ -305,4 +319,13 @@ export class GameState {
   public getTurn(): number { return this.turn; }
   public getCurrentPhase(): GamePhase { return this.currentPhase; }
   public getCurrentPlayer(): Faction { return this.currentPlayer; }
+
+  // ADDED: Methods needed by GameBoard component
+  public getAllCharacters(): CharacterModel[] {
+    return Array.from(this.characterInstances.values());
+  }
+
+  public getAllRegions(): RegionModel[] {
+    return Array.from(this.regionModels.values());
+  }
 }

@@ -342,7 +342,9 @@
       "position": 1,
       "special": "Bag End",
       "fellowshipAdjacent": ["REGION_ARTHEDAIN", "REGION_CARDOLAN"],
+      "sauronAdjacent": [],
       "startingCapacityFellowship": 4,
+      "startingCapacitySauron": 0,
       "factionCapacity": 4
     },
     {
@@ -354,6 +356,7 @@
       "sauronAdjacent": ["REGION_THE_SHIRE"],
       "fellowshipAdjacent": ["REGION_RHUDAUR", "REGION_EREGION"],
       "startingCapacityFellowship": 1,
+      "startingCapacitySauron": 0,
       "factionCapacity": 2
     },
     {
@@ -364,6 +367,7 @@
       "sauronAdjacent": ["REGION_THE_SHIRE"],
       "fellowshipAdjacent": ["REGION_EREGION", "REGION_ENEDWAITH"],
       "startingCapacityFellowship": 1,
+      "startingCapacitySauron": 0,
       "factionCapacity": 2
     },
     {
@@ -375,6 +379,7 @@
       "sauronAdjacent": ["REGION_ARTHEDAIN"],
       "fellowshipAdjacent": ["REGION_MISTY_MOUNTAINS", "REGION_THE_HIGH_PASS"],
       "startingCapacityFellowship": 1,
+      "startingCapacitySauron": 0,
       "factionCapacity": 2
     },
     {
@@ -385,8 +390,9 @@
       "special": "Tunnel of Moria",
       "sauronAdjacent": ["REGION_CARDOLAN", "REGION_ARTHEDAIN"],
       "fellowshipAdjacent": ["REGION_CARADHRAS", "REGION_MISTY_MOUNTAINS"],
-      "fellowshipSpecialForward": ["REGION_FANGORN"],
+      "fellowshipSpecialMovement": ["REGION_FANGORN"],
       "startingCapacityFellowship": 1,
+      "startingCapacitySauron": 0,
       "factionCapacity": 2
     },
     {
@@ -397,6 +403,7 @@
       "sauronAdjacent": ["REGION_CARDOLAN"],
       "fellowshipAdjacent": ["REGION_CARADHRAS", "REGION_GAP_OF_ROHAN"],
       "startingCapacityFellowship": 1,
+      "startingCapacitySauron": 0,
       "factionCapacity": 2
     },
     {
@@ -407,7 +414,8 @@
       "special": "Mountains",
       "sauronAdjacent": ["REGION_RHUDAUR"],
       "fellowshipAdjacent": ["REGION_MIRKWOOD"],
-      "startingCapacity": 0,
+      "startingCapacityFellowship": 0,
+      "startingCapacitySauron": 0,
       "factionCapacity": 1
     },
     {
@@ -418,7 +426,8 @@
       "special": "Mountains",
       "sauronAdjacent": ["REGION_EREGION", "REGION_RHUDAUR"],
       "fellowshipAdjacent": ["REGION_FANGORN", "REGION_MIRKWOOD"],
-      "startingCapacity": 0,
+      "startingCapacityFellowship": 0,
+      "startingCapacitySauron": 0,
       "factionCapacity": 1
     },
     {
@@ -429,7 +438,8 @@
       "special": "Mountains",
       "sauronAdjacent": ["REGION_ENEDWAITH", "REGION_EREGION"],
       "fellowshipAdjacent": ["REGION_FANGORN", "REGION_ROHAN"],
-      "startingCapacity": 0,
+      "startingCapacityFellowship": 0,
+      "startingCapacitySauron": 0,
       "factionCapacity": 1
     },
     {
@@ -440,7 +450,8 @@
       "special": ["Isenguard", "Helms Deep", "Mountains"],
       "sauronAdjacent": ["REGION_ENEDWAITH"],
       "fellowshipAdjacent": ["REGION_ROHAN"],
-      "startingCapacity": 0,
+      "startingCapacityFellowship": 0,
+      "startingCapacitySauron": 0,
       "factionCapacity": 1
     },
     {
@@ -452,6 +463,7 @@
       "sauronAdjacent": ["REGION_MISTY_MOUNTAINS", "REGION_THE_HIGH_PASS"],
       "fellowshipAdjacent": ["REGION_DAGORLAD"],
       "fellowshipSpecialForward": ["REGION_FANGORN"],
+      "startingCapacityFellowship": 0,
       "startingCapacitySauron": 1,
       "factionCapacity": 2
     },
@@ -461,9 +473,10 @@
       "row": 5,
       "position": 2,
       "special": "Lothlorian",
-      "sauronAdjacent": ["REGION_MISTY_MOUNTAINS", "REGION_CARADHRAS"],
+      "sauronAdjacent": ["REGION_MISTY_MOUNTAINS", "REGION_CARADHRAS", "REGION_EREGION"],
       "fellowshipAdjacent": ["REGION_GONDOR", "REGION_DAGORLAD"],
-      "fellowshipSpecialForward": ["REGION_ROHAN"],
+      "fellowshipSpecialMovement": ["REGION_ROHAN"],
+      "startingCapacityFellowship": 0,
       "startingCapacitySauron": 1,
       "factionCapacity": 2
     },
@@ -473,8 +486,9 @@
       "row": 5,
       "position": 3,
       "special": "Edoras",
-      "sauronAdjacent": ["REGION_GAP_OF_ROHAN", "REGION_CARADHRAS"],
-      "fellowshipAdjacent": ["REGION_GONDOR"],
+      "sauronAdjacent": ["REGION_GAP_OF_ROHAN", "REGION_CARADHRAS", "REGION_FANGORN"],
+      "fellowshipAdjacent": ["REGION_GONDOR", "REGION_FANGORN"],
+      "startingCapacityFellowship": 0,
       "startingCapacitySauron": 1,
       "factionCapacity": 2
     },
@@ -485,6 +499,7 @@
       "position": 1,
       "sauronAdjacent": ["REGION_FANGORN", "REGION_MIRKWOOD"],
       "fellowshipAdjacent": ["REGION_MORDOR"],
+      "startingCapacityFellowship": 0,
       "startingCapacitySauron": 1,
       "factionCapacity": 2
     },
@@ -494,8 +509,9 @@
       "row": 6,
       "position": 2,
       "special": "Shelobs Lair",
-      "sauronAdjacent": ["REGION_FANGORN", "REGION_ROHAN"],
-      "fellowshipAdjacent": ["REGION_MORDOR"],
+      "sauronAdjacent": ["REGION_FANGORN", "REGION_ROHAN", "REGION_MORDOR"],
+      "fellowshipAdjacent": ["REGION_MORDOR", "REGION_ROHAN", "REGION_FANGORN"],
+      "startingCapacityFellowship": 0,
       "startingCapacitySauron": 1,
       "factionCapacity": 2
     },
@@ -506,6 +522,8 @@
       "position": 1,
       "special": ["Mount Doom", "Barad Dur"],
       "sauronAdjacent": ["REGION_GONDOR", "REGION_DAGORLAD"],
+      "fellowshipAdjacent": [],
+      "startingCapacityFellowship": 0,
       "startingCapacitySauron": 4,
       "factionCapacity": 4
     }
@@ -525,7 +543,8 @@
           "condition": "HAS_DISCARDS"
         }
       ],
-      "resolutionOrder": 1
+      "resolutionOrder": 1,
+      "effectDescription": "Swap with a discarded card. Resolve immediately if replacement is text. No effect if no discards. If both play Magic, Sauron resolves first."
     },
     {
       "id": "CARD_FELLOWSHIP_NOBLE_SACRIFICE",
@@ -541,7 +560,8 @@
           "condition": "SAURON_DID_NOT_RETREAT_VIA_CARD"
         }
       ],
-      "resolutionOrder": 2
+      "resolutionOrder": 2,
+      "effectDescription": "Both battling characters are defeated unless Sauron retreats first."
     },
     {
       "id": "CARD_FELLOWSHIP_ELVEN_CLOAK",
@@ -557,7 +577,8 @@
           "condition": "SAURON_PLAYED_STRENGTH_CARD"
         }
       ],
-      "resolutionOrder": 3
+      "resolutionOrder": 3,
+      "effectDescription": "Negates Sauron's strength card value (including a strength card swapped in via Magic)."
     },
     {
       "id": "CARD_FELLOWSHIP_RETREAT",
@@ -573,7 +594,8 @@
           "condition": "LEGAL_BACKWARD_RETREAT_AVAILABLE"
         }
       ],
-      "resolutionOrder": 4
+      "resolutionOrder": 4,
+      "effectDescription": "Fellowship character must retreat backward if a legal retreat is available."
     },
     {
       "id": "CARD_FELLOWSHIP_STRENGTH_1",
@@ -582,7 +604,8 @@
       "cardType": "strength",
       "strength": 1,
       "abilities": [],
-      "resolutionOrder": 5
+      "resolutionOrder": 5,
+      "effectDescription": "Adds 1 to character strength."
     },
     {
       "id": "CARD_FELLOWSHIP_STRENGTH_2",
@@ -591,7 +614,8 @@
       "cardType": "strength",
       "strength": 2,
       "abilities": [],
-      "resolutionOrder": 5
+      "resolutionOrder": 5,
+      "effectDescription": "Adds 2 to character strength."
     },
     {
       "id": "CARD_FELLOWSHIP_STRENGTH_3",
@@ -600,7 +624,8 @@
       "cardType": "strength",
       "strength": 3,
       "abilities": [],
-      "resolutionOrder": 5
+      "resolutionOrder": 5,
+      "effectDescription": "Adds 3 to character strength."
     },
     {
       "id": "CARD_FELLOWSHIP_STRENGTH_4",
@@ -609,7 +634,8 @@
       "cardType": "strength",
       "strength": 4,
       "abilities": [],
-      "resolutionOrder": 5
+      "resolutionOrder": 5,
+      "effectDescription": "Adds 4 to character strength."
     },
     {
       "id": "CARD_FELLOWSHIP_STRENGTH_5",
@@ -618,7 +644,8 @@
       "cardType": "strength",
       "strength": 5,
       "abilities": [],
-      "resolutionOrder": 5
+      "resolutionOrder": 5,
+      "effectDescription": "Adds 5 to character strength."
     },
     {
       "id": "CARD_SAURON_MAGIC",
@@ -634,7 +661,8 @@
           "condition": "HAS_DISCARDS"
         }
       ],
-      "resolutionOrder": 1
+      "resolutionOrder": 1,
+      "effectDescription": "Swap with a discarded card. Resolve immediately if replacement is text. No effect if no discards. If both play Magic, Sauron resolves first."
     },
     {
       "id": "CARD_SAURON_EYE_OF_SAURON",
@@ -650,7 +678,8 @@
           "condition": "FELLOWSHIP_PLAYED_TEXT_CARD"
         }
       ],
-      "resolutionOrder": 2
+      "resolutionOrder": 2,
+      "effectDescription": "Negates the Fellowship's text card effect."
     },
     {
       "id": "CARD_SAURON_RETREAT",
@@ -666,7 +695,8 @@
           "condition": "LEGAL_SIDEWAYS_RETREAT_AVAILABLE"
         }
       ],
-      "resolutionOrder": 3
+      "resolutionOrder": 3,
+      "effectDescription": "Sauron character must retreat sideways if a legal retreat is available."
     },
     {
       "id": "CARD_SAURON_STRENGTH_1",
@@ -675,7 +705,8 @@
       "cardType": "strength",
       "strength": 1,
       "abilities": [],
-      "resolutionOrder": 4
+      "resolutionOrder": 4,
+      "effectDescription": "Adds 1 to character strength."
     },
     {
       "id": "CARD_SAURON_STRENGTH_2",
@@ -684,7 +715,8 @@
       "cardType": "strength",
       "strength": 2,
       "abilities": [],
-      "resolutionOrder": 4
+      "resolutionOrder": 4,
+      "effectDescription": "Adds 2 to character strength."
     },
     {
       "id": "CARD_SAURON_STRENGTH_3",
@@ -693,7 +725,8 @@
       "cardType": "strength",
       "strength": 3,
       "abilities": [],
-      "resolutionOrder": 4
+      "resolutionOrder": 4,
+      "effectDescription": "Adds 3 to character strength."
     },
     {
       "id": "CARD_SAURON_STRENGTH_4",
@@ -702,7 +735,8 @@
       "cardType": "strength",
       "strength": 4,
       "abilities": [],
-      "resolutionOrder": 4
+      "resolutionOrder": 4,
+      "effectDescription": "Adds 4 to character strength."
     },
     {
       "id": "CARD_SAURON_STRENGTH_5",
@@ -711,7 +745,8 @@
       "cardType": "strength",
       "strength": 5,
       "abilities": [],
-      "resolutionOrder": 4
+      "resolutionOrder": 4,
+      "effectDescription": "Adds 5 to character strength."
     },
     {
       "id": "CARD_SAURON_STRENGTH_6",
@@ -720,7 +755,8 @@
       "cardType": "strength",
       "strength": 6,
       "abilities": [],
-      "resolutionOrder": 4
+      "resolutionOrder": 4,
+      "effectDescription": "Adds 6 to character strength."
     }
   ]
 }

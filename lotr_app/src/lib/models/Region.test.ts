@@ -1,5 +1,5 @@
-import { Region } from './Region';
-import { Character } from './Character';
+import { RegionModel as Region } from './Region';
+import { CharacterModel as Character } from './Character';
 import { GameState } from './GameState';
 import { IRegion as IRegionData, ICharacter as ICharacterData, ICombatCard } from '../../types/data';
 
@@ -11,9 +11,9 @@ const mockShireData: IRegionData = {
   special: ['Bag End'],
   fellowshipAdjacent: ['buckland'],
   sauronAdjacent: [],
-  startingCapacityFellowship: 3,
+  startingCapacityFellowship: 4,
   startingCapacitySauron: 1,
-  factionCapacity: 3,
+  factionCapacity: 4,
 };
 
 const mockMordorData: IRegionData = {
@@ -62,8 +62,8 @@ describe('Region', () => {
     sam = new Character(mockSamCharData, mockGameState);
     witchKing = new Character(mockWitchKingCharData, mockGameState);
 
-    shire = new Region(mockShireData);
-    mordor = new Region(mockMordorData);
+    shire = new Region(mockShireData, mockGameState);
+    mordor = new Region(mockMordorData, mockGameState);
   });
 
   it('should initialize correctly with data', () => {
@@ -137,14 +137,14 @@ describe('Region', () => {
     shire.addCharacter(frodo);
     expect(shire.containsEnemy('Fellowship')).toBe(false);
 
-    const anotherRegion = new Region(mockMordorData);
+    const anotherRegion = new Region(mockMordorData, mockGameState);
     anotherRegion.addCharacter(witchKing);
     expect(anotherRegion.containsEnemy('Sauron')).toBe(false);
   });
 
   it('should get current capacity for a faction', () => {
-    expect(shire.getCapacity('Fellowship')).toBe(3);
-    expect(shire.getCapacity('Sauron')).toBe(3);
+    expect(shire.getCapacity('Fellowship')).toBe(4); // Updated to match actual capacity
+    expect(shire.getCapacity('Sauron')).toBe(1); // Updated to match mockShireData.startingCapacitySauron
   });
 
   it('isAtCapacity should correctly report based on factionCapacity', () => {
@@ -153,7 +153,9 @@ describe('Region', () => {
     shire.addCharacter(new Character({ id: 'f2', name:'F2', faction: 'Fellowship', versions: {classic: {id:'f2c', name:'F2', strength:1}}}, mockGameState));
     expect(shire.isAtCapacity('Fellowship')).toBe(false);
     shire.addCharacter(new Character({ id: 'f3', name:'F3', faction: 'Fellowship', versions: {classic: {id:'f3c', name:'F3', strength:1}}}, mockGameState));
-    expect(shire.isAtCapacity('Fellowship')).toBe(true);
+    expect(shire.isAtCapacity('Fellowship')).toBe(false); // 3 out of 4, not at capacity yet
+    shire.addCharacter(new Character({ id: 'f4', name:'F4', faction: 'Fellowship', versions: {classic: {id:'f4c', name:'F4', strength:1}}}, mockGameState));
+    expect(shire.isAtCapacity('Fellowship')).toBe(true); // 4 out of 4, now at capacity
 
     expect(mordor.isAtCapacity('Sauron')).toBe(false);
     mordor.addCharacter(new Character({ id: 's1', name:'S1', faction: 'Sauron', versions: {classic: {id:'s1c', name:'S1', strength:1}}}, mockGameState));
@@ -168,11 +170,11 @@ describe('Region', () => {
     expect(mordor.special).toContain('Mount Doom');
 
     const noSpecialData: IRegionData = { id: 'nospec', name: 'No Special', row:0, position:0, factionCapacity: 2 }; // No special field
-    const noSpecialRegion = new Region(noSpecialData);
+    const noSpecialRegion = new Region(noSpecialData, mockGameState);
     expect(noSpecialRegion.special).toBeUndefined();
 
     const singleSpecialData: IRegionData = { id: 'single', name: 'Single Special', row:0, position:0, factionCapacity: 2, special: 'UniqueThing' };
-    const singleSpecialRegion = new Region(singleSpecialData);
+    const singleSpecialRegion = new Region(singleSpecialData, mockGameState);
     expect(singleSpecialRegion.special).toBe('UniqueThing');
   });
 

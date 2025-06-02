@@ -1,4 +1,4 @@
-import { Character } from './Character';
+import { CharacterModel as Character } from './Character';
 import { GameState } from './GameState';
 import { ICharacter as ICharacterData, IRegion, ICombatCard } from '../../types/data';
 
@@ -8,7 +8,7 @@ const mockFrodoData: ICharacterData = {
   faction: 'Fellowship',
   versions: {
     classic: {
-      id: 'frodo-classic',
+      // id: 'frodo-classic', // Removed as per ICharacterVersion definition
       name: 'Frodo Baggins',
       strength: 1,
       specialAbilities: ['FRODO_RETREAT', 'RING_BEARER'],
@@ -22,7 +22,7 @@ const mockGollumData: ICharacterData = {
   faction: 'Sauron',
   versions: {
     classic: {
-      id: 'gollum-classic',
+      // id: 'gollum-classic', // Removed as per ICharacterVersion definition
       name: 'Gollum',
       strength: 2,
       specialAbilities: ['SNEAKY'],
@@ -59,7 +59,8 @@ describe('Character', () => {
     expect(frodo.strength).toBe(1);
     expect(frodo.getAbilities()).toEqual(['FRODO_RETREAT', 'RING_BEARER']);
     expect(frodo.location).toBeNull();
-    expect(frodo.is_defeated).toBe(false);
+    // expect(frodo.is_defeated).toBe(false); // is_defeated is an alias for defeated
+    expect(frodo.defeated).toBe(false); // Check defeated property directly
     expect(frodo.is_revealed).toBe(false);
   });
 
@@ -69,8 +70,8 @@ describe('Character', () => {
         name: 'Aragorn',
         faction: 'Fellowship',
         versions: {
-            classic: { id: 'aragorn-classic', name: 'Aragorn', strength: 4, specialAbilities: ['LEADER'] },
-            enhanced: { id: 'aragorn-enhanced', name: 'Aragorn, King Elessar', strength: 5, specialAbilities: ['LEADER', 'HEIR_OF_GONDOR'] }
+            classic: { /*id: 'aragorn-classic',*/ name: 'Aragorn', strength: 4, specialAbilities: ['LEADER'] },
+            enhanced: { /*id: 'aragorn-enhanced',*/ name: 'Aragorn, King Elessar', strength: 5, specialAbilities: ['LEADER', 'HEIR_OF_GONDOR'] }
         }
     };
     const aragornClassic = new Character(aragornData, mockGameState, 'classic');
@@ -88,7 +89,7 @@ describe('Character', () => {
         name: 'Legolas',
         faction: 'Fellowship',
         versions: {
-            classic: { id: 'legolas-classic', name: 'Legolas Greenleaf', strength: 3, specialAbilities: ['ARCHER'] }
+            classic: { /*id: 'legolas-classic',*/ name: 'Legolas Greenleaf', strength: 3, specialAbilities: ['ARCHER'] }
             // No enhanced version
         }
     };
@@ -100,7 +101,7 @@ describe('Character', () => {
         id: 'char-bad',
         name: 'Bad Character',
         faction: 'Sauron',
-        versions: { enhanced: { id: 'bad-enhanced', name: 'Bad Character Enhanced', strength: 1 } } // No classic
+        versions: { enhanced: { /*id: 'bad-enhanced',*/ name: 'Bad Character Enhanced', strength: 1 } } // No classic
     };
     expect(() => new Character(badCharData, mockGameState, 'classic')).toThrow('Version classic not found for character Bad Character');
   });
@@ -161,34 +162,44 @@ describe('Character', () => {
 
   it('should update location and log it', () => {
     const gameLogSpy = jest.spyOn(mockGameState, 'log');
+    // Initial placement for context, should not log as a "move" if setLocation handles isInitialSetup correctly
+    frodo.setLocation('shire', true); 
+    gameLogSpy.mockClear(); // Clear spy after initial setup
+
     frodo.setLocation('rivendell');
     expect(frodo.location).toBe('rivendell');
-    expect(gameLogSpy).toHaveBeenCalledWith(`${frodo.name} moved to Rivendell.`);
+    // Updated expectation to match new log message format
+    expect(gameLogSpy).toHaveBeenCalledWith(`Frodo Baggins moved from The Shire to Rivendell.`);
+    gameLogSpy.mockClear();
 
     frodo.setLocation(null); // Remove from board
     expect(frodo.location).toBeNull();
-    expect(gameLogSpy).toHaveBeenCalledWith(`${frodo.name} was removed from the board.`);
+    // Updated expectation to match new log message format
+    expect(gameLogSpy).toHaveBeenCalledWith(`Frodo Baggins was removed from the board (was in Rivendell).`);
   });
 
   it('should mark character as defeated, reveal it, and log it', () => {
     const gameLogSpy = jest.spyOn(mockGameState, 'log');
-    frodo.defeat();
-    expect(frodo.is_defeated).toBe(true);
+    frodo.setDefeated(true); // Changed from frodo.defeat()
+    // expect(frodo.is_defeated).toBe(true); // is_defeated is an alias for defeated
+    expect(frodo.defeated).toBe(true); // Check defeated property directly
     expect(frodo.is_revealed).toBe(true); // Defeated characters are revealed
     expect(gameLogSpy).toHaveBeenCalledWith(`${frodo.name} has been defeated.`);
   });
 
   it('should not log defeat if already defeated', () => {
-    frodo.defeat(); // First defeat
+    frodo.setDefeated(true); // Changed from frodo.defeat()
     const gameLogSpy = jest.spyOn(mockGameState, 'log');
-    frodo.defeat(); // Second defeat
-    expect(frodo.is_defeated).toBe(true);
+    frodo.setDefeated(true); // Changed from frodo.defeat()
+    // expect(frodo.is_defeated).toBe(true); // is_defeated is an alias for defeated
+    expect(frodo.defeated).toBe(true); // Check defeated property directly
     expect(gameLogSpy).not.toHaveBeenCalled();
   });
 
   it('should return current version data', () => {
     const versionData = frodo.getCurrentVersionData();
-    expect(versionData.id).toBe('frodo-classic');
+    // expect(versionData.id).toBe('frodo-classic'); // ID is not on ICharacterVersion
+    expect(versionData.name).toBe('Frodo Baggins'); // Check name instead
     expect(versionData.strength).toBe(1);
   });
 
@@ -196,7 +207,7 @@ describe('Character', () => {
     expect(frodo.getAbilities()).toEqual(['FRODO_RETREAT', 'RING_BEARER']);
     const noAbilityCharData: ICharacterData = {
         id: 'char-noability', name: 'No Ability Man', faction: 'Fellowship',
-        versions: { classic: { id: 'noability-classic', name: 'No Ability Man', strength: 1 } }
+        versions: { classic: { /*id: 'noability-classic',*/ name: 'No Ability Man', strength: 1 } }
     };
     const noAbilityChar = new Character(noAbilityCharData, mockGameState);
     expect(noAbilityChar.getAbilities()).toEqual([]);

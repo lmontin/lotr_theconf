@@ -34,7 +34,7 @@ export interface IRegion {
   startingCapacityFellowship?: number;
   startingCapacitySauron?: number;
   startingCapacity?: number;
-  // factionCapacity: number; // This seems redundant if we have per-faction capacities
+  factionCapacity?: number; // Uncommented to support test data
   isStronghold?: boolean; // Derived property, not in JSON
   isCity?: boolean; // Derived property, not in JSON
   isRiverAccess?: boolean; // Derived property, not in JSON
@@ -49,7 +49,7 @@ export interface ICharacterAbility {
 }
 
 export interface ICharacterVersion {
-  // id: string; // id seems to be on the parent ICharacter in gameData.json
+  id?: string; // Optional for backwards compatibility with test data
   name?: string; // name also seems to be on the parent ICharacter
   strength: number;
   abilities?: ICharacterAbility[]; // Updated from string[]

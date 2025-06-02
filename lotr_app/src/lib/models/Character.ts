@@ -71,6 +71,7 @@ export class CharacterModel implements ICharacter { // Changed class name to Cha
 
   public setLocation(regionId: string | null, isInitialSetup = false): void {
     const oldRegionId = this.location;
+    const oldRegionName = oldRegionId ? this.game.getRegionById(oldRegionId)?.name : 'off the board';
 
     if (oldRegionId === regionId) {
       if (isInitialSetup && regionId) {
@@ -91,13 +92,16 @@ export class CharacterModel implements ICharacter { // Changed class name to Cha
       const newRegionModel = this.game.getRegionById(regionId); // MODIFIED: Renamed to getRegionById
       if (newRegionModel) {
         newRegionModel.addOccupant(this.id);
+        if (!isInitialSetup) { // Avoid logging initial placement as a "move"
+            this.game.log(`${this.name} moved from ${oldRegionName || 'unknown region'} to ${newRegionModel.name}.`);
+        }
       } else {
         this.game.log(`Error: Attempted to set location for ${this.name} to non-existent region ${regionId}. Location cleared.`);
         this.location = null; 
       }
     } else {
       if (!isInitialSetup && oldRegionId) { 
-          const oldRegionName = this.game.getRegionById(oldRegionId)?.name || 'unknown region'; // MODIFIED: Renamed to getRegionById
+          // const oldRegionName = this.game.getRegionById(oldRegionId)?.name || 'unknown region'; // MODIFIED: Renamed to getRegionById
           this.game.log(`${this.name} was removed from the board (was in ${oldRegionName}).`);
       }
     }
@@ -125,5 +129,13 @@ export class CharacterModel implements ICharacter { // Changed class name to Cha
             this.game.log(`${this.name} is no longer defeated.`);
         }
     }
+  }
+
+  public getCurrentVersionData(): ICharacterVersion {
+    return this.currentVersionData;
+  }
+
+  public getAbilities(): string[] {
+    return this.currentVersionData.specialAbilities || [];
   }
 }
