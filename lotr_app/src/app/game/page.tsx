@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import GameBoard from '../components/GameBoard';
+import GameLog from '../components/GameLog';
 import { GameState } from '@/lib/models/GameState'; // Adjusted path
 import rawGameData from '@/data/gameData.json'; // Path to gameData (fixed)
 import { IGameData } from '@/types/data'; // Type for gameData
@@ -37,6 +38,9 @@ const GamePage: React.FC = () => {
     <main className="flex min-h-screen flex-col items-center p-4 sm:p-8 md:p-24">
       <h1 className="text-3xl sm:text-4xl font-bold mb-6 sm:mb-8">Lord of the Rings Game</h1>
       <GameBoard gameState={gameState} onGameUpdate={handleGameUpdate} />
+      <div className="w-full max-w-4xl mt-6">
+        <GameLog log={gameState.gameLog} />
+      </div>
     </main>
   );
 };
