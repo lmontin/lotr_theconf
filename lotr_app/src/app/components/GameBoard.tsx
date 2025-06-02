@@ -1,113 +1,191 @@
 'use client';
 
-import React, { useState } from 'react';
-import CharacterPiece, { CharacterData } from './CharacterPiece';
-
-// TODO: Import IRegion, GameState, RegionDisplay when available
-// import { IRegion } from \'@/lib/types/data\';
-// import { GameState } from \'@/lib/models/GameState\';
-// import RegionDisplay from \'./RegionDisplay\';
-
-// Sample Character Data for display - now includes locationId
-const initialSampleCharacters: CharacterData[] = [
-  { id: 'frodo-sample', name: 'Frodo', faction: 'Free Peoples', isConcealed: false, locationId: 'region-0' },
-  { id: 'gandalf-sample', name: 'Gandalf', faction: 'Free Peoples', isConcealed: false, locationId: 'region-1' },
-  { id: 'saruman-sample', name: 'Saruman', faction: 'Sauron', isConcealed: true, locationId: 'region-2' },
-  { id: 'witchking-sample', name: 'Witch-king', faction: 'Sauron', isConcealed: false, locationId: 'region-3' },
-  { id: 'aragorn-sample', name: 'Aragorn', faction: 'Free Peoples', isConcealed: false, locationId: 'region-0' }, // Another char in region 0
-];
+import React, { useState, useEffect, useCallback, useMemo } from 'react'; // Added useMemo
+import CharacterPiece from './CharacterPiece';
+import { GameState } from '@/lib/models/GameState';
+import { CharacterModel } from '@/lib/models/Character';
+import { RegionModel } from '@/lib/models/Region';
+import { getLegalMoves, LegalMove } from '@/lib/gameLogic/movement';
 
 interface GameBoardProps {
-  // TODO: Define props:
-  // gameState: GameState;
-  // onCharacterSelect: (characterId: string) => void; // Will be used by actual game logic
-  // onRegionSelect: (regionId: string) => void; // Will be used by actual game logic
-  // regions: IRegion[];
-  // charactersFromState: Character[]; // This would eventually replace sampleCharacters
+  gameState: GameState;
+  onGameUpdate: () => void;
 }
 
-const GameBoard: React.FC<GameBoardProps> = (
-  {
-    /* gameState, onCharacterSelect, onRegionSelect, regions, charactersFromState */
-  }
-) => {
+const GameBoard: React.FC<GameBoardProps> = ({ gameState, onGameUpdate }) => {
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
-  // Ensure CharacterData from CharacterPiece.tsx now includes optional locationId
-  const [characters, setCharacters] = useState<CharacterData[]>(initialSampleCharacters);
+  const [legalMoveRegionIds, setLegalMoveRegionIds] = useState<string[]>([]);
+  const [legalMoves, setLegalMoves] = useState<LegalMove[]>([]);
+
+  const allCharacters = gameState.getAllCharacters();
+  const allRegions = gameState.getAllRegions();
+
+  const stableOnGameUpdate = useCallback(onGameUpdate, [onGameUpdate]);
+
+  useEffect(() => {
+    console.log("GameBoard re-rendered due to gameState or onGameUpdate change.");
+    // If a character was selected, and the game state changed (e.g. character moved),
+    // recalculate legal moves for the currently selected character if they still exist.
+    if (selectedCharacterId) {
+      const character = gameState.getCharacterById(selectedCharacterId);
+      if (character && !character.defeated) {
+        const moves = getLegalMoves(character, gameState);
+        setLegalMoves(moves);
+        setLegalMoveRegionIds(moves.map(move => move.destinationRegionId));
+      } else {
+        // Character might have been defeated or removed, so clear selection
+        setSelectedCharacterId(null);
+        setLegalMoves([]);
+        setLegalMoveRegionIds([]);
+      }
+    }
+  }, [gameState, selectedCharacterId, stableOnGameUpdate]);
 
   const handleCharacterClick = (characterId: string) => {
+    const character = gameState.getCharacterById(characterId);
+    if (!character) return;
+
     if (selectedCharacterId === characterId) {
       setSelectedCharacterId(null);
-      console.log(`Character deselected: ${characterId}`);
+      setLegalMoves([]);
+      setLegalMoveRegionIds([]);
+      console.log(`Character deselected: ${character.name}`);
     } else {
       setSelectedCharacterId(characterId);
-      console.log(`Character selected: ${characterId}`);
+      console.log(`Character selected: ${character.name}`);
+      const moves = getLegalMoves(character, gameState);
+      setLegalMoves(moves);
+      setLegalMoveRegionIds(moves.map(move => move.destinationRegionId));
+      console.log(`Legal moves for ${character.name}:`, moves);
     }
   };
 
   const handleRegionClick = (regionId: string) => {
     console.log(`Region clicked: ${regionId}`);
-    if (selectedCharacterId) {
-      console.log(`Attempting to move character ${selectedCharacterId} to region ${regionId}`);
-      // Simulate move by updating character's locationId
-      setCharacters(prevCharacters =>
-        prevCharacters.map(char =>
-          char.id === selectedCharacterId ? { ...char, locationId: regionId } : char
-        )
-      );
-      console.log(`Character ${selectedCharacterId} moved to ${regionId} (simulated)`);
-      setSelectedCharacterId(null); // Deselect character after move attempt
+    if (selectedCharacterId && legalMoveRegionIds.includes(regionId)) {
+      const characterToMove = gameState.getCharacterById(selectedCharacterId);
+      const targetRegion = gameState.getRegionById(regionId);
+
+      if (characterToMove && targetRegion) {
+        console.log(`Attempting to move ${characterToMove.name} to ${targetRegion.name}`);
+        
+        const moveSuccess = gameState.moveCharacter(selectedCharacterId, regionId);
+
+        if (moveSuccess) {
+          console.log("Move successful via GameState method.");
+          // Deselect character and clear legal moves *before* calling onGameUpdate
+          // to ensure the UI reflects the new state correctly before any potential re-calculation of moves.
+          setSelectedCharacterId(null);
+          setLegalMoves([]);
+          setLegalMoveRegionIds([]);
+          onGameUpdate(); 
+        } else {
+          console.log("Move failed via GameState method. Character may remain selected with old legal moves.");
+          // Optionally, re-fetch legal moves if the failed move attempt could change game state affecting them
+          // For now, we assume a failed move doesn't change legal moves, but this might need adjustment.
+        }
+      } else {
+        console.error('Move failed: Character or target region not found.');
+        setSelectedCharacterId(null);
+        setLegalMoves([]);
+        setLegalMoveRegionIds([]);
+      }
     } else {
-      console.log('No character selected to move, or region is not a valid target currently.');
+      console.log('No character selected or region is not a legal move.');
+      if (selectedCharacterId) {
+        setSelectedCharacterId(null);
+        setLegalMoves([]);
+        setLegalMoveRegionIds([]);
+      }
     }
   };
 
+  const selectedCharacter = selectedCharacterId ? gameState.getCharacterById(selectedCharacterId) : null;
+
+  // Group and sort regions for rendering based on row and position
+  const regionsByRow = useMemo(() => {
+    const grouped: { [key: number]: RegionModel[] } = {};
+    allRegions.forEach(region => {
+      if (!grouped[region.row]) {
+        grouped[region.row] = [];
+      }
+      grouped[region.row].push(region);
+    });
+
+    for (const row in grouped) {
+      grouped[row].sort((a, b) => a.position - b.position);
+    }
+    return grouped;
+  }, [allRegions]);
+
+  const sortedRowNumbers = useMemo(() => {
+    return Object.keys(regionsByRow).map(Number).sort((a, b) => a - b);
+  }, [regionsByRow]);
+
   return (
-    <div className="w-full min-h-screen bg-gray-200 p-4">
-      <h1 className="text-2xl font-bold mb-4">Game Board</h1>
-      {selectedCharacterId && (
-        <p className="mb-4 text-lg font-semibold text-indigo-600">
-          Selected Character: {characters.find(c => c.id === selectedCharacterId)?.name || 'Unknown'}
+    <div className="w-full min-h-screen bg-gray-100 p-4">
+      <h1 className="text-2xl font-bold mb-4 text-center">Game Board</h1>
+      {selectedCharacter && (
+        <p className="mb-4 text-lg font-semibold text-indigo-700 text-center">
+          Selected: {selectedCharacter.name} ({selectedCharacter.faction})
         </p>
       )}
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 mb-8">
-        {/* Placeholder for 9 regions - replace with actual region data and rendering */}
-        {Array.from({ length: 9 }).map((_, index) => {
-          const regionId = `region-${index}`;
-          const charactersInRegion = characters.filter(char => char.locationId === regionId);
-          return (
-            <div
-              key={regionId}
-              className="bg-green-300 p-4 rounded shadow aspect-square flex flex-col items-center justify-start cursor-pointer hover:bg-green-400 transition-colors min-h-[100px]"
-              onClick={() => handleRegionClick(regionId)}
-              title={`Region ${index + 1}`}
-            >
-              <span className="font-semibold mb-2">Region {index + 1}</span>
-              <div className="space-y-1 w-full">
-                {charactersInRegion.map(char => (
-                  <CharacterPiece
-                    key={char.id}
-                    character={char}
-                    onClick={() => handleCharacterClick(char.id)} // Ensure this doesn't stop propagation if region click is also desired
-                    isSelected={char.id === selectedCharacterId}
-                  />
-                ))}
-                {charactersInRegion.length === 0 && (
-                  <p className="text-xs text-gray-500 italic">Empty</p>
-                )}
-              </div>
-            </div>
-          );
-        })}
+      {legalMoveRegionIds.length > 0 && !selectedCharacter && (
+         // Hide legal moves hint if no character is selected, as legal moves are cleared.
+        <></>
+      )}
+      {legalMoveRegionIds.length > 0 && selectedCharacter && (
+        <p className="mb-4 text-md text-yellow-600 text-center">
+          Legal moves for {selectedCharacter.name} highlighted in yellow.
+        </p>
+      )}
+
+      {/* Game Board Layout by Rows and Positions */}
+      <div className="space-y-4 mb-8"> {/* Container for all rows */}
+        {sortedRowNumbers.map(rowNumber => (
+          <div key={`row-${rowNumber}`} className="flex flex-row flex-wrap justify-center items-stretch gap-2 sm:gap-4"> {/* Row container */}
+            {regionsByRow[rowNumber].map(region => {
+              const charactersInRegion = allCharacters.filter(char => char.getLocation() === region.id);
+              const isLegalMove = legalMoveRegionIds.includes(region.id);
+              const regionBgColor = isLegalMove ? "bg-yellow-200" : "bg-green-300";
+              const regionBorderColor = isLegalMove ? "border-yellow-500" : "border-transparent";
+
+              return (
+                <div
+                  key={region.id}
+                  className={`p-3 sm:p-4 rounded shadow-lg flex flex-col items-center justify-start cursor-pointer hover:shadow-xl transition-all duration-150 ease-in-out ${regionBgColor} border-4 ${regionBorderColor} w-[120px] h-[120px] sm:w-[150px] sm:h-[150px]`}
+                  onClick={() => handleRegionClick(region.id)}
+                  title={`${region.name} (Row: ${region.row}, Pos: ${region.position}) | ID: ${region.id} | Cap: F${region.getCapacity('Fellowship')},S${region.getCapacity('Sauron')}`}
+                >
+                  <span className="font-bold text-xs sm:text-sm mb-1 sm:mb-2 text-center truncate w-full">{region.name}</span>
+                  <div className="space-y-1 w-full overflow-y-auto flex-grow" style={{maxHeight: 'calc(100% - 30px)'}}>
+                    {charactersInRegion.length > 0 ? (
+                      charactersInRegion.map(char => (
+                        <CharacterPiece
+                          key={char.id}
+                          character={char}
+                          onClick={(e) => { e.stopPropagation(); handleCharacterClick(char.id); }}
+                          isSelected={char.id === selectedCharacterId}
+                        />
+                      ))
+                    ) : (
+                      <p className="text-xs text-gray-600 italic text-center mt-2">Empty</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
-      <h2 className="text-xl font-semibold mb-2">Character Pool (Click to select/deselect):</h2>
-      <div className="flex flex-wrap gap-2 p-2 bg-gray-100 rounded">
-        {initialSampleCharacters.map(char => (
+      <h2 className="text-xl font-semibold mb-3 text-center">Character Pool (All Characters)</h2>
+      <div className="flex flex-wrap gap-3 p-3 bg-gray-200 rounded-lg justify-center">
+        {allCharacters.map(char => (
           <CharacterPiece
-            key={char.id} // Use initialSampleCharacters here if you want a static list for selection
-            character={characters.find(c => c.id === char.id) || char} // Ensure we get updated location for display if needed, but selection is primary
-            onClick={() => handleCharacterClick(char.id)}
+            key={char.id}
+            character={char}
+            onClick={() => handleCharacterClick(char.id)} // Direct click, no stopPropagation needed here
             isSelected={char.id === selectedCharacterId}
           />
         ))}

@@ -100,37 +100,117 @@ export class GameState {
     return this.characterInstances.get(characterId);
   }
 
-  public getRegionModel(regionId: string): RegionModel | undefined {
+  public getAllCharacters(): CharacterModel[] {
+    return Array.from(this.characterInstances.values());
+  }
+
+  public getAllRegions(): RegionModel[] {
+    return Array.from(this.regionModels.values());
+  }
+
+  // Example of how to get a region by ID, if needed later
+  public getRegionById(regionId: string): RegionModel | undefined {
     return this.regionModels.get(regionId);
   }
 
-  public getTurn(): number {
-    return this.turn;
+  // Placeholder for advancing turn and phase
+  public advancePhase(): void {
+    // Basic phase progression logic (can be expanded)
+    switch (this.currentPhase) {
+      case 'SETUP':
+        this.currentPhase = 'FELLOWSHIP_MOVE';
+        this.currentPlayer = 'Fellowship';
+        break;
+      case 'FELLOWSHIP_MOVE':
+        this.currentPhase = 'FELLOWSHIP_ACTION';
+        break;
+      case 'FELLOWSHIP_ACTION':
+        this.currentPhase = 'SAURON_MOVE';
+        this.currentPlayer = 'Sauron';
+        break;
+      case 'SAURON_MOVE':
+        this.currentPhase = 'SAURON_ACTION';
+        break;
+      case 'SAURON_ACTION':
+        this.currentPhase = 'UPKEEP';
+        this.currentPlayer = 'Fellowship'; // Or determine based on game rules
+        this.turn++;
+        break;
+      case 'UPKEEP':
+        this.currentPhase = 'FELLOWSHIP_MOVE';
+        break;
+      case 'GAME_OVER':
+        // No phase change
+        break;
+      default:
+        this.log('Unknown game phase');
+    }
+    this.log(`Phase advanced to ${this.currentPhase}. Current player: ${this.currentPlayer}. Turn: ${this.turn}`);
   }
 
-  public getCurrentPhase(): GamePhase {
-    return this.currentPhase;
-  }
-
-  public setActiveBattle(battleData: any | null): void {
-    this.activeBattle = battleData;
-    if (battleData) {
-      this.log(`Active battle initiated: ${JSON.stringify(battleData)}`);
-    } else {
-      this.log(`Active battle cleared.`);
+  // Placeholder for checking game over conditions
+  public checkGameOver(): void {
+    // Example condition: Sauron wins if Frodo is corrupted or captured
+    // Example condition: Fellowship wins if the One Ring is destroyed
+    // This needs to be implemented based on specific game rules
+    if (this.turn > 20) { // Example: Game ends after 20 turns (placeholder)
+        this.winner = 'Draw'; // Or determine winner based on victory points
+        this.currentPhase = 'GAME_OVER';
+        this.gameOver = true;
+        this.log('Game Over. Max turns reached.');
     }
   }
-  
-  public getLastMove(): any | null { // ADDED
-    return this.lastMove;
+
+  // Method to place a character in a region
+  public placeCharacter(characterId: string, regionId: string): boolean {
+    const character = this.characterInstances.get(characterId);
+    const region = this.regionModels.get(regionId);
+
+    if (character && region) {
+      // Remove character from previous region if any
+      this.regionModels.forEach(r => r.removeOccupant(characterId)); // MODIFIED: Renamed to removeOccupant
+      // Add character to new region
+      region.addOccupant(character.id); // MODIFIED: Renamed to addOccupant and pass ID
+      character.setLocation(regionId); // MODIFIED: Renamed to setLocation
+      this.log(`Placed character ${character.name} in region ${region.name}`);
+      return true;
+    }
+    this.log(`Failed to place character ${characterId} in region ${regionId}. Character or region not found.`);
+    return false;
   }
 
-  public getActiveBattle(): any | null { // ADDED
-    return this.activeBattle;
-  }
-  
-  // TODO: Review if getCharactersInRegion is still needed or if logic
-  // using it (e.g. in older versions of canEnterRegion) has been fully migrated
-  // to use RegionModel.getOccupants() directly.
-  // For now, assuming it's not essential if canEnterRegion is updated.
+    // Method to move a character from one region to another
+    public moveCharacter(characterId: string, toRegionId: string): boolean {
+        const character = this.getCharacterById(characterId);
+        const toRegion = this.getRegionById(toRegionId);
+
+        if (!character) {
+            this.log(`Move failed: Character ${characterId} not found.`);
+            return false;
+        }
+        if (!toRegion) {
+            this.log(`Move failed: Target region ${toRegionId} not found.`);
+            return false;
+        }
+
+        const fromRegionId = character.getLocation(); // MODIFIED: Renamed to getLocation
+        if (fromRegionId) {
+            const fromRegion = this.getRegionById(fromRegionId);
+            if (fromRegion) {
+                fromRegion.removeOccupant(characterId); // MODIFIED: Renamed to removeOccupant
+            }
+        }
+
+        toRegion.addOccupant(character.id); // MODIFIED: Renamed to addOccupant and pass ID
+        character.setLocation(toRegionId); // MODIFIED: Renamed to setLocation
+        this.log(`Character ${character.name} moved to ${toRegion.name}.`);
+        // Potentially trigger other game events here (e.g., revealing character, battle)
+        return true;
+    }
+
+
+  // Getters for basic game state information
+  public getTurn(): number { return this.turn; }
+  public getCurrentPhase(): GamePhase { return this.currentPhase; }
+  public getCurrentPlayer(): Faction { return this.currentPlayer; }
 }
