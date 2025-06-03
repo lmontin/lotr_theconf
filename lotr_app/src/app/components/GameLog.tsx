@@ -260,6 +260,17 @@ const GameLog: React.FC<GameLogProps> = ({ log, gameState }) => {
               </div>
             </div>
             <div className="p-4 max-h-[60vh] overflow-y-auto text-xs font-mono whitespace-pre-wrap">
+              {/* Show live character status above raw game state */}
+              {gameState && getLiveCharacterStatus(gameState) && (
+                <>
+                  <div className="mb-2">
+                    <span className="font-bold">Live Character Status:</span>
+                    <pre className="mb-2 bg-gray-100 rounded p-2 overflow-x-auto">
+                      {JSON.stringify(getLiveCharacterStatus(gameState), null, 2)}
+                    </pre>
+                  </div>
+                </>
+              )}
               {gameState ? (
                 <pre ref={gameStateRef}>
                   {JSON.stringify(gameState, null, 2)
@@ -288,5 +299,18 @@ const GameLog: React.FC<GameLogProps> = ({ log, gameState }) => {
     </div>
   );
 };
+
+// Helper to get live character status as plain objects
+function getLiveCharacterStatus(gameState: any) {
+  if (!gameState || typeof gameState.getAllCharacters !== 'function') return null;
+  return gameState.getAllCharacters().map((char: any) => ({
+    id: char.id,
+    name: char.name,
+    faction: char.faction,
+    defeated: char.defeated ?? char.isDefeated ?? false,
+    location: char.getLocation ? char.getLocation() : char.location,
+    revealed: char.isRevealed ?? char.is_revealed ?? false,
+  }));
+}
 
 export default GameLog;
