@@ -1,4 +1,4 @@
-import { resolveSimpleBattle } from '../systems/BattleSystem';
+import { resolveSimpleBattle, resolveFullBattle } from '../systems/BattleSystem';
 
 import { ICharacter, IRegion, ICombatCard } from '../../types/data';
 
@@ -312,21 +312,31 @@ export class GameState {
         if (enemies.length > 0) {
             // For now, just battle the first enemy found
             const defender = enemies[0];
-            const result = resolveSimpleBattle(character, defender, this);
+            // Use the new 4-step battle system
+            const result = resolveFullBattle(character, defender, this);
             // Mark loser as defeated
-            if (!result.tie && result.loser) {
-                result.loser.setDefeated(true);
-                // Remove defeated character from the board (set location to null)
-                this.setCharacterLocation(result.loser.id, null);
+            if (result.outcome !== 'MUTUAL_DEFEAT' && result.outcome) {
+                if (result.outcome === 'ATTACKER_WIN') {
+                    defender.setDefeated?.(true);
+                    this.setCharacterLocation(defender.id, null);
+                } else if (result.outcome === 'DEFENDER_WIN') {
+                    character.setDefeated?.(true);
+                    this.setCharacterLocation(character.id, null);
+                }
+            } else if (result.outcome === 'MUTUAL_DEFEAT') {
+                character.setDefeated?.(true);
+                defender.setDefeated?.(true);
+                this.setCharacterLocation(character.id, null);
+                this.setCharacterLocation(defender.id, null);
             }
             // Optionally, log the battle result in battleHistory
             this.logBattle({
                 attacker: character.name,
                 defender: defender.name,
-                winner: result.winner ? result.winner.name : null,
-                loser: result.loser ? result.loser.name : null,
-                tie: result.tie,
-                log: result.log,
+                winner: result.outcome === 'ATTACKER_WIN' ? character.name : result.outcome === 'DEFENDER_WIN' ? defender.name : null,
+                loser: result.outcome === 'ATTACKER_WIN' ? defender.name : result.outcome === 'DEFENDER_WIN' ? character.name : null,
+                tie: result.outcome === 'MUTUAL_DEFEAT',
+                log: result.log ? result.log.join('\n') : '',
                 turn: this.turn,
                 phase: this.currentPhase
             });
