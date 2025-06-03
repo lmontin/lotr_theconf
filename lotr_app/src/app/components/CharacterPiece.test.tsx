@@ -154,8 +154,9 @@ describe('CharacterPiece', () => {
       character={mockCharacterRevealed as any} 
       onClick={handleClick} 
       viewingPlayer="Fellowship"
+      currentPlayer="Fellowship"
     />);
-    // Instead of checking the exact title, check that it contains the character name and ability
+    // Check that it contains the character name and ability
     const titleElement = screen.getByTitle(/Aragorn \(Fellowship\)/);
     expect(titleElement).toBeInTheDocument();
     expect(titleElement).toHaveAttribute('title', expect.stringContaining('When moving, can move into any adjacent region'));
@@ -176,8 +177,34 @@ describe('CharacterPiece', () => {
       character={mockCharacterRevealed as any} 
       onClick={handleClick} 
       viewingPlayer="Fellowship"
+      currentPlayer="Fellowship"
     />);
     fireEvent.click(screen.getByText('Aragorn (4)'));
     expect(handleClick).toHaveBeenCalledWith(expect.anything(), mockCharacterRevealed.id);
+  });
+
+  it('does not call onClick handler when opponent character is clicked during player turn', () => {
+    render(<CharacterPiece 
+      character={mockCharacterConcealed as any} 
+      onClick={handleClick} 
+      viewingPlayer="Sauron"
+      currentPlayer="Fellowship"
+    />);
+    fireEvent.click(screen.getByText('Saruman (3)'));
+    expect(handleClick).not.toHaveBeenCalled();
+  });
+
+  it('does not show detailed tooltip for opponent character during player turn', () => {
+    render(<CharacterPiece 
+      character={mockCharacterRevealed as any} 
+      onClick={handleClick} 
+      viewingPlayer="Sauron"
+      currentPlayer="Sauron"
+    />);
+    // Character is revealed and viewed by Sauron player, but current turn is Sauron
+    // So they should see the basic info but not detailed abilities since it's Fellowship character
+    const titleElement = screen.getByTitle('Aragorn (Fellowship)');
+    expect(titleElement).toBeInTheDocument();
+    expect(titleElement).not.toHaveAttribute('title', expect.stringContaining('When moving, can move into any adjacent region'));
   });
 });

@@ -23,31 +23,41 @@ const CharacterPiece: React.FC<CharacterPieceProps> = ({
   // Determine if character details should be shown
   const shouldShowDetails = is_revealed || (viewingPlayer && faction === viewingPlayer);
   
+  // Determine if player can interact with this character
+  const canInteract = currentPlayer === faction;
+  
   const handleClick = (event: React.MouseEvent<HTMLDivElement>) => { // Added event parameter
+    // Prevent interaction with opponent characters during player's turn
+    if (!canInteract) {
+      return;
+    }
+    
     if (onClick) {
       onClick(event, id); // Pass event and id
     }
   };
 
-  // Get character abilities for tooltip (only if details should be shown)
+  // Get character abilities for tooltip (only if details should be shown AND player can interact)
   const abilities = character.getAbilities();
   const currentVersionData = character.getCurrentVersionData();
   const abilityTexts = shouldShowDetails ? (currentVersionData.abilities?.map(ability => ability.text) || []) : [];
   
-  const tooltipText = shouldShowDetails 
+  // Only show detailed tooltips for characters the player can interact with
+  const tooltipText = canInteract && shouldShowDetails 
     ? (abilityTexts.length > 0 
         ? `${name} (${faction})\n\nAbilities:\n${abilityTexts.map(text => `• ${text}`).join('\n')}`
         : `${name} (${faction})`)
-    : `${faction} Character`;
+    : (shouldShowDetails ? `${name} (${faction})` : `${faction} Character`);
 
-  const baseStyle = "p-2 border rounded shadow-md cursor-pointer transition-all duration-150 ease-in-out relative";
+  const baseStyle = "p-2 border rounded shadow-md transition-all duration-150 ease-in-out relative";
+  const interactionStyle = canInteract ? "cursor-pointer" : "cursor-not-allowed opacity-75";
   const factionStyle = faction === "Fellowship" ? "bg-blue-200 border-blue-400" : "bg-red-200 border-red-400";
   const concealmentStyle = is_revealed ? "opacity-100" : "opacity-50 italic";
   const selectedStyle = isSelected ? "ring-2 ring-yellow-500 ring-offset-2 scale-105" : "border-gray-300";
 
   return (
     <div
-      className={`${baseStyle} ${factionStyle} ${concealmentStyle} ${selectedStyle} group`}
+      className={`${baseStyle} ${interactionStyle} ${factionStyle} ${concealmentStyle} ${selectedStyle} group`}
       onClick={handleClick}
       title={tooltipText}
     >
@@ -57,8 +67,8 @@ const CharacterPiece: React.FC<CharacterPieceProps> = ({
         <p className="font-bold text-sm text-center">?</p>
       )}
       
-      {/* Custom hover tooltip */}
-      {shouldShowDetails && abilityTexts.length > 0 && (
+      {/* Custom hover tooltip - only show for characters the player can interact with */}
+      {canInteract && shouldShowDetails && abilityTexts.length > 0 && (
         <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 max-w-xs whitespace-normal">
           <div className="font-semibold mb-1">Abilities:</div>
           {abilityTexts.map((text, index) => (

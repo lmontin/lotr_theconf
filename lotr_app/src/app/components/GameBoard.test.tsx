@@ -24,12 +24,15 @@ const mockCharacter1Data = {
   id: 'char1',
   name: 'Aragorn',
   faction: 'Fellowship',
+  strength: 3, // Add top-level strength property
   versions: { classic: { strength: 3, abilities: [] } },
   is_revealed: true,
   defeated: false,
   // location: 'region1', // Initial location set in beforeEach
   getLocation: jest.fn(), // Mocked in beforeEach
   isDefeated: jest.fn(() => false),
+  getAbilities: jest.fn(() => []), // Add missing method
+  getCurrentVersionData: jest.fn(() => ({ strength: 3, abilities: [] })), // Add missing method
   // Ensure all properties expected by CharacterPiece are present or mocked
   image_url: 'path/to/aragorn.png', 
   type: 'Hero', 
@@ -39,12 +42,15 @@ const mockCharacter2Data = {
   id: 'char2',
   name: 'Frodo',
   faction: 'Fellowship',
+  strength: 1, // Add top-level strength property
   versions: { classic: { strength: 1, abilities: [] } },
   is_revealed: true,
   defeated: false,
   // location: 'region1', // Initial location set in beforeEach
   getLocation: jest.fn(), // Mocked in beforeEach
   isDefeated: jest.fn(() => false),
+  getAbilities: jest.fn(() => []), // Add missing method
+  getCurrentVersionData: jest.fn(() => ({ strength: 1, abilities: [] })), // Add missing method
   image_url: 'path/to/frodo.png',
   type: 'Ring-bearer',
 } as unknown as CharacterModel;
@@ -99,6 +105,8 @@ describe('GameBoard Component', () => {
     mockGameStateInstance = {
       getAllCharacters: jest.fn(() => [mockCharacter1Data, mockCharacter2Data]),
       getAllRegions: jest.fn(() => [mockRegion1Data, mockRegion2Data, mockRegion3Data]),
+      getCurrentPlayer: jest.fn(() => 'Fellowship'), // Add the missing method
+      getTurn: jest.fn(() => 1), // Add the missing method
       getCharacterById: jest.fn(id => {
         if (id === 'char1') return mockCharacter1Data;
         if (id === 'char2') return mockCharacter2Data;
@@ -132,8 +140,8 @@ describe('GameBoard Component', () => {
     expect(moriaRegion).toBeInTheDocument();
 
     // Check for characters within their initial region (Rivendell)
-    expect(within(rivendellRegion! as HTMLElement).getByText('Aragorn')).toBeInTheDocument();
-    expect(within(rivendellRegion! as HTMLElement).getByText('Frodo')).toBeInTheDocument();
+    expect(within(rivendellRegion! as HTMLElement).getByText(/Aragorn/)).toBeInTheDocument();
+    expect(within(rivendellRegion! as HTMLElement).getByText(/Frodo/)).toBeInTheDocument();
     
     // Check for characters in the pool - scope the search to the pool's direct container
     const characterPoolHeading = screen.getByText('Character Pool (All Characters)');
@@ -141,8 +149,8 @@ describe('GameBoard Component', () => {
     expect(characterPoolContainer).toBeInTheDocument(); 
     if (!characterPoolContainer) throw new Error("Character pool container not found");
 
-    expect(within(characterPoolContainer as HTMLElement).getByText('Aragorn')).toBeInTheDocument();
-    expect(within(characterPoolContainer as HTMLElement).getByText('Frodo')).toBeInTheDocument();
+    expect(within(characterPoolContainer as HTMLElement).getByText(/Aragorn/)).toBeInTheDocument();
+    expect(within(characterPoolContainer as HTMLElement).getByText(/Frodo/)).toBeInTheDocument();
   });
 
   test('clicking a character selects it and fetches legal moves', async () => {
@@ -153,7 +161,7 @@ describe('GameBoard Component', () => {
     render(<GameBoard gameState={mockGameStateInstance} onGameUpdate={mockOnGameUpdate} />);
 
     const rivendellRegion = screen.getByText('Rivendell').closest('div[class*="cursor-pointer"]');
-    const aragornPieceInRegion = within(rivendellRegion! as HTMLElement).getByText('Aragorn').closest('div[title*="Aragorn"]');
+    const aragornPieceInRegion = within(rivendellRegion! as HTMLElement).getByText(/Aragorn/).closest('div[title*="Aragorn"]');
     
     expect(aragornPieceInRegion).not.toBeNull();
     if (!aragornPieceInRegion) return; 
@@ -174,7 +182,9 @@ describe('GameBoard Component', () => {
     render(<GameBoard gameState={mockGameStateInstance} onGameUpdate={mockOnGameUpdate} />);
     
     const rivendellRegion = screen.getByText('Rivendell').closest('div[class*="cursor-pointer"]');
-    const aragornPieceInRegion = within(rivendellRegion! as HTMLElement).getByText('Aragorn').closest('div[title*="Aragorn"]');
+    const aragornPieceInRegion = within(rivendellRegion! as HTMLElement).getByText((content, element) => {
+      return element?.textContent?.includes('Aragorn') || false;
+    }).closest('div[title*="Aragorn"]');
 
     expect(aragornPieceInRegion).not.toBeNull();
     if (!aragornPieceInRegion) return;
@@ -188,7 +198,7 @@ describe('GameBoard Component', () => {
     // Second click to deselect
     fireEvent.click(aragornPieceInRegion);
     await waitFor(() => {
-      expect(screen.queryByText('Selected: Aragorn (Fellowship)')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Selected: Aragorn \(Fellowship\)/)).not.toBeInTheDocument();
     });
     const lorienRegion = screen.getByText('Lorien').closest('div[class*="cursor-pointer"]');
     expect(lorienRegion).not.toHaveClass('border-yellow-500');
@@ -216,7 +226,9 @@ describe('GameBoard Component', () => {
 
     // 1. Select Aragorn (from Rivendell)
     const rivendellRegionContainer = screen.getByText('Rivendell').closest('div[class*="cursor-pointer"]');
-    const aragornPieceContainer = within(rivendellRegionContainer! as HTMLElement).getByText('Aragorn').closest('div[title*="Aragorn"]');
+    const aragornPieceContainer = within(rivendellRegionContainer! as HTMLElement).getByText((content, element) => {
+      return element?.textContent?.includes('Aragorn') || false;
+    }).closest('div[title*="Aragorn"]');
     expect(aragornPieceContainer).toBeInTheDocument();
     fireEvent.click(aragornPieceContainer!);
 
@@ -237,7 +249,7 @@ describe('GameBoard Component', () => {
     });
     
     expect(mockOnGameUpdate).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText('Selected: Aragorn (Fellowship)')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Selected: Aragorn \(Fellowship\)/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Legal moves for Aragorn/i)).not.toBeInTheDocument(); 
 
     lorienRegionContainer = screen.getByText('Lorien').closest('div[class*="cursor-pointer"]'); 
@@ -245,11 +257,11 @@ describe('GameBoard Component', () => {
     expect(lorienRegionContainer).not.toHaveClass('bg-yellow-200');
     expect(lorienRegionContainer).toHaveClass('bg-green-300'); 
 
-    expect(within(lorienRegionContainer! as HTMLElement).queryByText('Aragorn')).toBeInTheDocument();
+    expect(within(lorienRegionContainer! as HTMLElement).queryByText(/Aragorn/)).toBeInTheDocument();
 
     const updatedRivendellRegionContainer = screen.getByText('Rivendell').closest('div[class*="cursor-pointer"]');
-    expect(within(updatedRivendellRegionContainer! as HTMLElement).queryByText('Aragorn')).not.toBeInTheDocument();
-    expect(within(updatedRivendellRegionContainer! as HTMLElement).queryByText('Frodo')).toBeInTheDocument();
+    expect(within(updatedRivendellRegionContainer! as HTMLElement).queryByText(/Aragorn/)).not.toBeInTheDocument();
+    expect(within(updatedRivendellRegionContainer! as HTMLElement).queryByText(/Frodo/)).toBeInTheDocument();
   });
 
   test('clicking an illegal region does not move character and deselects', async () => {
@@ -261,7 +273,9 @@ describe('GameBoard Component', () => {
 
     // 1. Select Aragorn (from Rivendell)
     const rivendellRegionContainer = screen.getByText('Rivendell').closest('div[class*="cursor-pointer"]');
-    const aragornPieceContainer = within(rivendellRegionContainer! as HTMLElement).getByText('Aragorn').closest('div[title*="Aragorn"]');
+    const aragornPieceContainer = within(rivendellRegionContainer! as HTMLElement).getByText((content, element) => {
+      return element?.textContent?.includes('Aragorn') || false;
+    }).closest('div[title*="Aragorn"]');
     expect(aragornPieceContainer).toBeInTheDocument();
     fireEvent.click(aragornPieceContainer!);
 
@@ -275,14 +289,16 @@ describe('GameBoard Component', () => {
     fireEvent.click(moriaRegionContainer!);
 
     await waitFor(() => {
-      expect(screen.queryByText('Selected: Aragorn (Fellowship)')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Selected: Aragorn \(Fellowship\)/)).not.toBeInTheDocument();
     });
 
     expect(mockGameStateInstance.moveCharacter).not.toHaveBeenCalled();
     expect(mockOnGameUpdate).not.toHaveBeenCalled();
 
     const currentRivendellContainer = screen.getByText('Rivendell').closest('div[class*="cursor-pointer"]');
-    expect(within(currentRivendellContainer! as HTMLElement).getByText('Aragorn')).toBeInTheDocument();
+    expect(within(currentRivendellContainer! as HTMLElement).getByText((content, element) => {
+      return element?.textContent?.includes('Aragorn') || false;
+    })).toBeInTheDocument();
 
     const lorienRegionContainer = screen.getByText('Lorien').closest('div[class*="cursor-pointer"]');
     expect(lorienRegionContainer).not.toHaveClass('border-yellow-500');
@@ -295,7 +311,9 @@ describe('GameBoard Component', () => {
 
     // Aragorn should be in Rivendell
     let rivendellContainer = screen.getByText('Rivendell').closest('div[class*="cursor-pointer"]');
-    expect(within(rivendellContainer! as HTMLElement).getByText('Aragorn')).toBeInTheDocument();
+    expect(within(rivendellContainer! as HTMLElement).getByText((content, element) => {
+      return element?.textContent?.includes('Aragorn') || false;
+    })).toBeInTheDocument();
 
     // Simulate an external update: Aragorn moves to Lorien
     (mockCharacter1Data.getLocation as jest.Mock).mockReturnValue('region2');
@@ -305,11 +323,11 @@ describe('GameBoard Component', () => {
     rerender(<GameBoard gameState={mockGameStateInstance} onGameUpdate={mockOnGameUpdate} />);
     
     const lorienContainer = screen.getByText('Lorien').closest('div[class*="cursor-pointer"]');
-    expect(within(lorienContainer! as HTMLElement).getByText('Aragorn')).toBeInTheDocument();
+    expect(within(lorienContainer! as HTMLElement).getByText(/Aragorn/)).toBeInTheDocument();
     
     rivendellContainer = screen.getByText('Rivendell').closest('div[class*="cursor-pointer"]'); 
-    expect(within(rivendellContainer! as HTMLElement).queryByText('Aragorn')).not.toBeInTheDocument();
-    expect(within(rivendellContainer! as HTMLElement).getByText('Frodo')).toBeInTheDocument(); // Frodo should still be there
+    expect(within(rivendellContainer! as HTMLElement).queryByText(/Aragorn/)).not.toBeInTheDocument();
+    expect(within(rivendellContainer! as HTMLElement).getByText(/Frodo/)).toBeInTheDocument(); // Frodo should still be there
   });
 });
 
