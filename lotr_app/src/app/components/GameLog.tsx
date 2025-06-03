@@ -24,6 +24,12 @@ const GameLog: React.FC<GameLogProps> = ({ log, gameState }) => {
   const [highlightedIdx, setHighlightedIdx] = useState(0);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const logRefs = useRef<(HTMLDivElement | null)[]>([]);
+  
+  // Game state modal search states
+  const [modalSearch, setModalSearch] = useState("");
+  const [showModalDropdown, setShowModalDropdown] = useState(false);
+  const [modalHighlightedIdx, setModalHighlightedIdx] = useState(0);
+  const gameStateRef = useRef<HTMLPreElement | null>(null);
 
   // Prepare log entries as objects with time/message if needed
   const logEntries = log.map((entry, idx) => {
@@ -42,6 +48,22 @@ const GameLog: React.FC<GameLogProps> = ({ log, gameState }) => {
       )
     : [];
 
+  // Game state search matches
+  const gameStateMatches = modalSearch && gameState
+    ? (() => {
+        const gameStateStr = JSON.stringify(gameState, null, 2);
+        const lines = gameStateStr.split('\n');
+        return lines
+          .map((line, idx) => ({ line: line.trim(), lineNumber: idx }))
+          .filter(({ line }) => line.toLowerCase().includes(modalSearch.toLowerCase()))
+          .map(({ line, lineNumber }) => ({
+            display: line.length > 60 ? line.substring(0, 60) + '...' : line,
+            lineNumber,
+            fullLine: line
+          }));
+      })()
+    : [];
+
   // Scroll to selected log entry
   const jumpToLog = (idx: number) => {
     setSelectedIdx(idx);
@@ -50,6 +72,37 @@ const GameLog: React.FC<GameLogProps> = ({ log, gameState }) => {
     const ref = logRefs.current[idx];
     if (ref) {
       ref.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
+
+  // Jump to game state line
+  const jumpToGameStateLine = (lineNumber: number) => {
+    setShowModalDropdown(false);
+    setModalSearch("");
+    
+    if (gameStateRef.current) {
+      // Find the target line element
+      const targetElement = gameStateRef.current.querySelector(`[data-line="${lineNumber}"]`);
+      
+      if (targetElement) {
+        // Scroll to the target element
+        targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        
+        // Highlight the target line temporarily
+        const originalBg = (targetElement as HTMLElement).style.backgroundColor;
+        const originalColor = (targetElement as HTMLElement).style.color;
+        
+        (targetElement as HTMLElement).style.backgroundColor = '#3b82f6';
+        (targetElement as HTMLElement).style.color = 'white';
+        (targetElement as HTMLElement).style.transition = 'all 0.3s ease';
+        
+        setTimeout(() => {
+          (targetElement as HTMLElement).style.backgroundColor = originalBg;
+          (targetElement as HTMLElement).style.color = originalColor;
+        }, 2000);
+      } else {
+        console.warn(`Could not find line element for line ${lineNumber}`);
+      }
     }
   };
 
@@ -67,6 +120,23 @@ const GameLog: React.FC<GameLogProps> = ({ log, gameState }) => {
       jumpToLog(matches[highlightedIdx].idx);
     } else if (e.key === "Escape") {
       setShowDropdown(false);
+    }
+  };
+
+  // Keyboard navigation for modal dropdown
+  const handleModalKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showModalDropdown || gameStateMatches.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setModalHighlightedIdx((prev) => (prev + 1) % gameStateMatches.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setModalHighlightedIdx((prev) => (prev - 1 + gameStateMatches.length) % gameStateMatches.length);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      jumpToGameStateLine(gameStateMatches[modalHighlightedIdx].lineNumber);
+    } else if (e.key === "Escape") {
+      setShowModalDropdown(false);
     }
   };
 
@@ -126,7 +196,7 @@ const GameLog: React.FC<GameLogProps> = ({ log, gameState }) => {
           return (
             <div
               key={origIdx}
-              ref={(el) => (logRefs.current[origIdx] = el)}
+              ref={(el) => { logRefs.current[origIdx] = el; }}
               className={`text-sm ${selectedIdx === origIdx ? "bg-blue-100" : ""}`}
             >
               <span className="text-xs text-gray-500 mr-2">{entry.time}</span>
@@ -144,33 +214,69 @@ const GameLog: React.FC<GameLogProps> = ({ log, gameState }) => {
                 <span className="font-bold text-lg">Current Game State</span>
                 <button
                   className="ml-4 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowModal(false);
+                    setModalSearch("");
+                    setShowModalDropdown(false);
+                  }}
                 >
                   Close
                 </button>
               </div>
-              <input
-                type="text"
-                className="mt-2 px-2 py-1 border rounded text-xs w-full"
-                placeholder="Search game state..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                autoFocus
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  className="mt-2 px-2 py-1 border rounded text-xs w-full"
+                  placeholder="Search game state..."
+                  value={modalSearch}
+                  onChange={(e) => {
+                    setModalSearch(e.target.value);
+                    setShowModalDropdown(!!e.target.value && gameStateMatches.length > 0);
+                    setModalHighlightedIdx(0);
+                  }}
+                  onFocus={() => setShowModalDropdown(!!modalSearch && gameStateMatches.length > 0)}
+                  onBlur={() => setTimeout(() => setShowModalDropdown(false), 100)}
+                  onKeyDown={handleModalKeyDown}
+                  autoFocus
+                />
+                {showModalDropdown && gameStateMatches.length > 0 && (
+                  <div className="absolute z-20 left-0 right-0 max-h-40 overflow-y-auto border bg-white shadow rounded mt-1">
+                    {gameStateMatches.map((match, i) => (
+                      <div
+                        key={match.lineNumber}
+                        className={`px-2 py-1 cursor-pointer text-xs ${
+                          modalHighlightedIdx === i ? "bg-blue-100" : ""
+                        }`}
+                        onMouseDown={() => jumpToGameStateLine(match.lineNumber)}
+                        onMouseEnter={() => setModalHighlightedIdx(i)}
+                        title={match.fullLine}
+                      >
+                        <span className="text-gray-500 mr-2">Line {match.lineNumber + 1}:</span>
+                        {highlightMatch(match.display, modalSearch)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="p-4 max-h-[60vh] overflow-y-auto text-xs font-mono whitespace-pre-wrap">
               {gameState ? (
-                <pre>
-                  {search
-                    ? JSON.stringify(gameState, null, 2)
-                        .split('\n')
-                        .map((line, idx) =>
-                          line.toLowerCase().includes(search.toLowerCase()) ? (
-                            <span key={idx} className="bg-yellow-200 text-black">{line + '\n'}</span>
-                          ) : (
-                            <span key={idx}>{line + '\n'}</span>
-                        ))
-                    : JSON.stringify(gameState, null, 2)}
+                <pre ref={gameStateRef}>
+                  {JSON.stringify(gameState, null, 2)
+                    .split('\n')
+                    .map((line, idx) => (
+                      <span 
+                        key={idx} 
+                        data-line={idx}
+                        className={
+                          modalSearch && line.toLowerCase().includes(modalSearch.toLowerCase()) 
+                            ? "bg-yellow-200 text-black" 
+                            : ""
+                        }
+                      >
+                        {line + '\n'}
+                      </span>
+                    ))}
                 </pre>
               ) : (
                 <span>No game state available.</span>
