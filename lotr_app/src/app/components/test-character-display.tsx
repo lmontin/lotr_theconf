@@ -7,7 +7,7 @@ import { GameState } from '@/lib/models/GameState';
 
 // Simple test component to verify character display
 const TestCharacterDisplay: React.FC = () => {
-  // Create a mock character for testing
+  // Create mock characters for testing
   const mockGameData = {
     characters: [
       {
@@ -27,6 +27,24 @@ const TestCharacterDisplay: React.FC = () => {
             ]
           }
         }
+      },
+      {
+        id: 'test-saruman',
+        name: 'Saruman',
+        faction: 'Sauron' as const,
+        versions: {
+          classic: {
+            strength: 3,
+            abilities: [
+              {
+                id: 'SARUMAN_MAGIC',
+                text: 'Can cast spells during battle',
+                trigger: 'BATTLE_START',
+                condition: 'ALWAYS'
+              }
+            ]
+          }
+        }
       }
     ],
     regions: [],
@@ -34,37 +52,100 @@ const TestCharacterDisplay: React.FC = () => {
   };
 
   const gameState = new GameState(mockGameData);
-  const testCharacter = gameState.getCharacterById('test-frodo');
+  const fellowshipCharacter = gameState.getCharacterById('test-frodo');
+  const sauronCharacter = gameState.getCharacterById('test-saruman');
 
-  if (!testCharacter) {
-    return <div>Failed to create test character</div>;
+  // Create a revealed version of Saruman for testing
+  const revealedSauronCharacter = gameState.getCharacterById('test-saruman');
+  if (revealedSauronCharacter) {
+    revealedSauronCharacter.reveal();
+  }
+
+  if (!fellowshipCharacter || !sauronCharacter) {
+    return <div>Failed to create test characters</div>;
   }
 
   return (
     <div className="p-4">
       <h3 className="text-lg font-bold mb-4">Character Display Test</h3>
-      <div className="space-y-4">
+      
+      <div className="space-y-6">
         <div>
-          <h4 className="font-semibold mb-2">Concealed Character:</h4>
-          <CharacterPiece
-            character={testCharacter}
-            onClick={(e, id) => console.log('Clicked character:', id)}
-          />
+          <h4 className="font-semibold mb-2">Fellowship Player's View (Fellowship Turn):</h4>
+          <div className="flex gap-4">
+            <div>
+              <p className="text-sm mb-1">Own Character (Frodo - Concealed):</p>
+              <CharacterPiece
+                character={fellowshipCharacter}
+                currentPlayer="Fellowship"
+                viewingPlayer="Fellowship"
+                onClick={(e, id) => console.log('Clicked character:', id)}
+              />
+            </div>
+            <div>
+              <p className="text-sm mb-1">Opponent Character (Saruman - Concealed):</p>
+              <CharacterPiece
+                character={sauronCharacter}
+                currentPlayer="Fellowship"
+                viewingPlayer="Fellowship"
+                onClick={(e, id) => console.log('Clicked character:', id)}
+              />
+            </div>
+            <div>
+              <p className="text-sm mb-1">Opponent Character (Saruman - Revealed):</p>
+              <CharacterPiece
+                character={revealedSauronCharacter!}
+                currentPlayer="Fellowship"
+                viewingPlayer="Fellowship"
+                onClick={(e, id) => console.log('Clicked character:', id)}
+              />
+            </div>
+          </div>
         </div>
+
         <div>
-          <h4 className="font-semibold mb-2">Revealed Character:</h4>
-          <CharacterPiece
-            character={(() => {
-              testCharacter.reveal();
-              return testCharacter;
-            })()}
-            onClick={(e, id) => console.log('Clicked character:', id)}
-          />
+          <h4 className="font-semibold mb-2">Sauron Player's View (Sauron Turn):</h4>
+          <div className="flex gap-4">
+            <div>
+              <p className="text-sm mb-1">Opponent Character (Frodo - Concealed):</p>
+              <CharacterPiece
+                character={fellowshipCharacter}
+                currentPlayer="Sauron"
+                viewingPlayer="Sauron"
+                onClick={(e, id) => console.log('Clicked character:', id)}
+              />
+            </div>
+            <div>
+              <p className="text-sm mb-1">Own Character (Saruman - Concealed):</p>
+              <CharacterPiece
+                character={sauronCharacter}
+                currentPlayer="Sauron"
+                viewingPlayer="Sauron"
+                onClick={(e, id) => console.log('Clicked character:', id)}
+              />
+            </div>
+            <div>
+              <p className="text-sm mb-1">Own Character (Saruman - Revealed):</p>
+              <CharacterPiece
+                character={revealedSauronCharacter!}
+                currentPlayer="Sauron"
+                viewingPlayer="Sauron"
+                onClick={(e, id) => console.log('Clicked character:', id)}
+              />
+            </div>
+          </div>
         </div>
       </div>
+      
       <div className="mt-4 text-sm text-gray-600">
-        <p>Expected: Character name should show with strength in brackets (e.g., "Frodo (1)")</p>
-        <p>Hover over the character to see abilities tooltip</p>
+        <p><strong>Expected Behavior:</strong></p>
+        <ul className="list-disc list-inside">
+          <li>Own characters always show name and strength, even when concealed</li>
+          <li>Opponent's concealed characters show only "?" </li>
+          <li>Opponent's revealed characters show name and strength normally</li>
+          <li>Concealed characters appear greyed out (50% opacity)</li>
+          <li>Revealed characters appear at full opacity</li>
+        </ul>
       </div>
     </div>
   );

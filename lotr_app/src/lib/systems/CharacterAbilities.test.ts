@@ -21,7 +21,7 @@ const mockCharacters: ICharacter[] = [
       classic: {
         strength: 1,
         abilities: [
-          { id: 'FRODO_RETREAT', text: 'Can retreat sideways when defending', trigger: 'BATTLE_START' }
+          { id: 'FRODO_RETREAT', text: 'When defending, may retreat sideways to an adjacent region at the beginning of a battle (not allowed in the mountains)', trigger: 'BATTLE_START' }
         ]
       }
     }

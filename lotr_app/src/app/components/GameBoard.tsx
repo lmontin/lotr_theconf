@@ -19,6 +19,10 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onGameUpdate }) => {
 
   const allCharacters = gameState.getAllCharacters();
   const allRegions = gameState.getAllRegions();
+  const currentPlayer = gameState.getCurrentPlayer();
+  // For now, assume viewing player is the same as current player
+  // This could be made configurable for multiplayer scenarios
+  const viewingPlayer = currentPlayer;
 
   useEffect(() => {
     // If a character was selected, calculate legal moves for them
@@ -167,6 +171,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onGameUpdate }) => {
                           character={char}
                           onClick={(e, charId) => { e.stopPropagation(); handleCharacterClick(charId); }} // Modified to use charId from callback
                           isSelected={char.id === selectedCharacterId}
+                          currentPlayer={currentPlayer}
+                          viewingPlayer={viewingPlayer}
                         />
                       ))
                     ) : (
@@ -188,6 +194,8 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onGameUpdate }) => {
             character={char}
             onClick={(_e, charId) => handleCharacterClick(charId)} // Modified to use charId, _e as event is not used here for stopPropagation
             isSelected={char.id === selectedCharacterId}
+            currentPlayer={currentPlayer}
+            viewingPlayer={viewingPlayer}
           />
         ))}
       </div>
