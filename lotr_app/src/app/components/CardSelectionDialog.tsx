@@ -1,5 +1,5 @@
 import React from 'react';
-import { ICombatCard } from '../../../types/data';
+import { ICombatCard } from '../../types/data';
 
 interface CardSelectionDialogProps {
   hand: ICombatCard[];

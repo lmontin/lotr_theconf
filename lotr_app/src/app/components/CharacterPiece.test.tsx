@@ -46,7 +46,7 @@ interface MockCharacterData {
 }
 
 // Mock Character Data
-const mockCharacterRevealed: MockCharacterData = {
+const mockCharacterRevealed: MockCharacterData & { getAbilities: () => string[], getCurrentVersionData: () => any } = {
   id: 'char1',
   name: 'Aragorn',
   type: CharacterType.FreePeoples,
@@ -64,9 +64,19 @@ const mockCharacterRevealed: MockCharacterData = {
   isLeader: false,
   onTheBoard: true,
   order: 1,
+  getAbilities: () => ['ARAGORN_LEADERSHIP'],
+  getCurrentVersionData: () => ({
+    abilities: [
+      {
+        id: 'ARAGORN_LEADERSHIP',
+        text: 'Can lead armies and inspire courage in battle',
+        trigger: 'BATTLE_START'
+      }
+    ]
+  })
 };
 
-const mockCharacterConcealed: MockCharacterData = {
+const mockCharacterConcealed: MockCharacterData & { getAbilities: () => string[], getCurrentVersionData: () => any } = {
   id: 'char2',
   name: 'Saruman',
   type: CharacterType.Shadow,
@@ -84,6 +94,16 @@ const mockCharacterConcealed: MockCharacterData = {
   isLeader: false,
   onTheBoard: true,
   order: 1,
+  getAbilities: () => ['SARUMAN_MAGIC'],
+  getCurrentVersionData: () => ({
+    abilities: [
+      {
+        id: 'SARUMAN_MAGIC',
+        text: 'Can cast powerful spells and manipulate enemies',
+        trigger: 'PRE_BATTLE'
+      }
+    ]
+  })
 };
 
 describe('CharacterPiece', () => {
@@ -93,33 +113,33 @@ describe('CharacterPiece', () => {
     handleClick = jest.fn();
   });
 
-  it('renders character name and revealed status', () => {
+  it('renders character name with strength and revealed status', () => {
     render(<CharacterPiece character={mockCharacterRevealed as any} onClick={handleClick} />);
-    expect(screen.getByText('Aragorn')).toBeInTheDocument();
+    expect(screen.getByText('Aragorn (4)')).toBeInTheDocument();
     expect(screen.getByText('(Revealed)')).toBeInTheDocument();
   });
 
-  it('renders character name and concealed status', () => {
+  it('renders character name with strength and concealed status', () => {
     render(<CharacterPiece character={mockCharacterConcealed as any} onClick={handleClick} />);
-    expect(screen.getByText('Saruman')).toBeInTheDocument(); // Name should be visible
+    expect(screen.getByText('Saruman (3)')).toBeInTheDocument(); // Name should be visible with strength
     expect(screen.getByText('(Concealed)')).toBeInTheDocument();
   });
 
-  it('displays the correct title for a revealed character', () => {
+  it('displays the correct title with abilities for a revealed character', () => {
     render(<CharacterPiece character={mockCharacterRevealed as any} onClick={handleClick} />);
-    const expectedTitle = `Aragorn (Fellowship) - Revealed`; // Updated faction string
+    const expectedTitle = `Aragorn (Fellowship) - Revealed\n\nAbilities:\n• Can lead armies and inspire courage in battle`;
     expect(screen.getByTitle(expectedTitle)).toBeInTheDocument();
   });
 
-  it('displays the correct title for a concealed character', () => {
+  it('displays the correct title with abilities for a concealed character', () => {
     render(<CharacterPiece character={mockCharacterConcealed as any} onClick={handleClick} />);
-    const expectedTitle = `Saruman (Sauron) - Concealed`; // Updated faction string to 'Sauron'
+    const expectedTitle = `Saruman (Sauron) - Concealed\n\nAbilities:\n• Can cast powerful spells and manipulate enemies`;
     expect(screen.getByTitle(expectedTitle)).toBeInTheDocument();
   });
 
   it('calls onClick handler with character id when clicked', () => {
     render(<CharacterPiece character={mockCharacterRevealed as any} onClick={handleClick} />);
-    fireEvent.click(screen.getByText('Aragorn'));
+    fireEvent.click(screen.getByText('Aragorn (4)'));
     expect(handleClick).toHaveBeenCalledWith(expect.anything(), mockCharacterRevealed.id);
   });
 });
