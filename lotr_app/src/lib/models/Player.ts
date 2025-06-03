@@ -65,6 +65,13 @@ export class Player {
         this.discard = [];
     }
 
+    /**
+     * Alias for reclaimDiscardPile - used by GameState.
+     */
+    reclaimHand(): void {
+        this.reclaimDiscardPile();
+    }
+
     toJSON(): any {
         return {
             faction: this.faction,

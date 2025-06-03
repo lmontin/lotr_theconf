@@ -230,13 +230,61 @@ export class GameState {
   // Placeholder for advancing turn and phase
   public nextTurn(): void {
     // Alternate player each turn, only one move per turn
-    if (this.currentPlayer === 'Sauron') {
-      this.currentPlayer = 'Fellowship';
-    } else {
+    if (this.currentPlayer === 'Fellowship') {
       this.currentPlayer = 'Sauron';
       this.turn++;
+      // When switching to Sauron, set to Sauron move phase
+      if (this.currentPhase === 'SETUP') {
+        this.currentPhase = 'SAURON_MOVE';
+      } else if (this.currentPhase === 'FELLOWSHIP_MOVE') {
+        this.currentPhase = 'SAURON_MOVE';
+      }
+    } else {
+      this.currentPlayer = 'Fellowship';
+      // When switching to Fellowship, set to Fellowship move phase
+      if (this.currentPhase === 'SAURON_MOVE') {
+        this.currentPhase = 'FELLOWSHIP_MOVE';
+      } else if (this.currentPhase === 'SETUP') {
+        this.currentPhase = 'FELLOWSHIP_MOVE';
+      }
     }
-    this.log(`Turn advanced. Current player: ${this.currentPlayer}. Turn: ${this.turn}`);
+    this.log(`Turn advanced. Current player: ${this.currentPlayer}. Turn: ${this.turn}. Phase: ${this.currentPhase}`);
+  }
+
+  // Method to advance to the next phase in the turn sequence
+  public nextPhase(): void {
+    switch (this.currentPhase) {
+      case 'SETUP':
+        this.currentPhase = 'SAURON_MOVE';
+        this.currentPlayer = 'Sauron';
+        break;
+      case 'SAURON_MOVE':
+        this.currentPhase = 'SAURON_ACTION';
+        // Current player remains Sauron
+        break;
+      case 'SAURON_ACTION':
+        this.currentPhase = 'FELLOWSHIP_MOVE';
+        this.currentPlayer = 'Fellowship';
+        break;
+      case 'FELLOWSHIP_MOVE':
+        this.currentPhase = 'FELLOWSHIP_ACTION';
+        // Current player remains Fellowship
+        break;
+      case 'FELLOWSHIP_ACTION':
+        this.currentPhase = 'UPKEEP';
+        this.currentPlayer = 'Sauron'; // Upkeep is handled by Sauron
+        break;
+      case 'UPKEEP':
+        // Start next turn
+        this.turn++;
+        this.currentPhase = 'SAURON_MOVE';
+        this.currentPlayer = 'Sauron';
+        break;
+      case 'GAME_OVER':
+        // No phase change if game is over
+        break;
+    }
+    this.log(`Phase advanced to ${this.currentPhase}. Current player: ${this.currentPlayer}. Turn: ${this.turn}`);
   }
 
   // Placeholder for checking game over conditions

@@ -123,7 +123,9 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onGameUpdate }) => {
 
   return (
     <div className="w-full min-h-screen bg-gray-100 p-4">
-      <h1 className="text-2xl font-bold mb-4 text-center">Game Board</h1>
+      <h1 className="text-2xl font-bold mb-4 text-center">
+        Turn {gameState.getTurn()} - {gameState.getCurrentPlayer()}
+      </h1>
       {selectedCharacter && (
         <p className="mb-4 text-lg font-semibold text-indigo-700 text-center">
           Selected: {selectedCharacter.name} ({selectedCharacter.faction})

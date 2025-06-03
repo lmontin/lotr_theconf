@@ -30,7 +30,7 @@ describe('GameState', () => {
   it('should initialize correctly', () => {
     expect(gameState.getTurn()).toBe(1);
     expect(gameState.getCurrentPhase()).toBe('SETUP');
-    expect(gameState.getCurrentPlayer()).toBe('Fellowship');
+    expect(gameState.getCurrentPlayer()).toBe('Sauron');
     expect(gameState.winner).toBeNull();
     expect(gameState.gameOver).toBe(false);
     expect(gameState.fellowshipPlayer).toBeDefined();
@@ -41,29 +41,29 @@ describe('GameState', () => {
   });
 
   it('should progress turns and phases correctly', () => {
-    // Initial: SETUP, Fellowship
-    gameState.nextPhase(); // FELLOWSHIP_MOVE, Fellowship
-    expect(gameState.getCurrentPhase()).toBe('FELLOWSHIP_MOVE');
-    expect(gameState.getCurrentPlayer()).toBe('Fellowship');
-    expect(gameState.getTurn()).toBe(1);
-
-    gameState.nextPhase(); // FELLOWSHIP_ACTION, Fellowship
-    expect(gameState.getCurrentPhase()).toBe('FELLOWSHIP_ACTION');
-
+    // Initial: SETUP, Sauron
     gameState.nextPhase(); // SAURON_MOVE, Sauron
     expect(gameState.getCurrentPhase()).toBe('SAURON_MOVE');
     expect(gameState.getCurrentPlayer()).toBe('Sauron');
+    expect(gameState.getTurn()).toBe(1);
 
     gameState.nextPhase(); // SAURON_ACTION, Sauron
     expect(gameState.getCurrentPhase()).toBe('SAURON_ACTION');
 
-    gameState.nextPhase(); // UPKEEP, Fellowship
-    expect(gameState.getCurrentPhase()).toBe('UPKEEP');
-    expect(gameState.getCurrentPlayer()).toBe('Fellowship');
-
-    gameState.nextPhase(); // FELLOWSHIP_MOVE, Fellowship, Turn 2
+    gameState.nextPhase(); // FELLOWSHIP_MOVE, Fellowship
     expect(gameState.getCurrentPhase()).toBe('FELLOWSHIP_MOVE');
     expect(gameState.getCurrentPlayer()).toBe('Fellowship');
+
+    gameState.nextPhase(); // FELLOWSHIP_ACTION, Fellowship
+    expect(gameState.getCurrentPhase()).toBe('FELLOWSHIP_ACTION');
+
+    gameState.nextPhase(); // UPKEEP, Sauron
+    expect(gameState.getCurrentPhase()).toBe('UPKEEP');
+    expect(gameState.getCurrentPlayer()).toBe('Sauron');
+
+    gameState.nextPhase(); // SAURON_MOVE, Sauron, Turn 2
+    expect(gameState.getCurrentPhase()).toBe('SAURON_MOVE');
+    expect(gameState.getCurrentPlayer()).toBe('Sauron');
     expect(gameState.getTurn()).toBe(2);
   });
 
