@@ -1,6 +1,57 @@
+import { Player } from '../models/Player';
+import { ICombatCard } from '../../types/data';
 import { CharacterModel } from '../models/Character';
 import { GameState } from '../models/GameState';
 import { triggerAbilities, checkBattleEnd, BattleContext } from './AbilitySystem';
+
+/**
+ * Reveals a card in the context of a battle, updating the context and log.
+ * For Magic/Eye of Sauron, logs the reveal and sets a flag in context.
+ */
+export function revealCard(card: ICombatCard, ctx: any): void {
+  if (!ctx || !ctx.log) return;
+  ctx.log.push(`Card revealed: ${card.name}`);
+  if (!ctx.cardsRevealed) ctx.cardsRevealed = [];
+  ctx.cardsRevealed.push(card.id);
+  // For text cards, set flags for further resolution
+  if (card.id === 'CARD_FELLOWSHIP_MAGIC' || card.id === 'CARD_SAURON_MAGIC') {
+    ctx.magicCardRevealed = true;
+  }
+  if (card.id === 'CARD_SAURON_EYE_OF_SAURON') {
+    ctx.eyeOfSauronRevealed = true;
+  }
+}
+
+/**
+ * After a card is played, check if both players should reclaim their discards as new hands.
+ */
+export function checkHandReclaimAfterCardPlay(gameState: GameState): void {
+  gameState.checkAndTriggerHandReclaim();
+}
+
+/**
+ * Plays a card for the player during battle, removing it from hand and adding to discard.
+ * Returns the played card, or undefined if not found.
+ */
+export function playBattleCard(player: Player, cardId: string): ICombatCard | undefined {
+  return player.playCard(cardId);
+}
+
+/**
+ * Returns the available cards in a player's hand
+ */
+export function getAvailableCards(player: Player): ICombatCard[] {
+  return player.hand;
+}
+
+/**
+ * Selects a card from the player's hand for battle (stub: picks first card for now)
+ * In production, this would be replaced by UI or AI logic.
+ */
+export function chooseCard(player: Player, ctx?: any): ICombatCard | undefined {
+  const available = getAvailableCards(player);
+  return available.length > 0 ? available[0] : undefined;
+}
 
 export interface FullBattleContext extends BattleContext {
   attacker: CharacterModel;

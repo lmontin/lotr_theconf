@@ -64,10 +64,16 @@
   - [x] 5.1 Build Simple Battle syetm only using character strength and no cards. 
   - [x] 5.2 Build 4-step battle resolution system (reveal, abilities, cards, strength comparison) 
   - [x] 5.3 Implement ability trigger system with proper timing (BATTLE_START, RESOLVE_CARDS, etc.) ✅ ALL TESTS PASSING
-  - [ ] 5.4 Create all character ability handlers (Frodo retreat, Sam substitute, etc.) **READY TO START** 
-  - [ ] 5.5 Implement all combat card ability handlers (Magic, Noble Sacrifice, etc.) 
-  - [ ] 5.6 Build retreat mechanics with direction validation 
-  - [ ] 5.7 Create test scenarios for battle resolution (including Aragorn vs Shelob example) 
+  - [x] 5.4 Create all character ability handlers (Frodo retreat, Sam substitute, etc.) 
+  - [ ] 5.5 Implement card management system integration with battle resolution **READY TO START**
+    - [ ] 5.5.1 Add card selection methods to BattleSystem (chooseCard for human/AI players)
+    - [ ] 5.5.2 Integrate Player.playCard() with battle resolution card play phase
+    - [ ] 5.5.3 Implement automatic hand reclaim checking after each card play
+    - [ ] 5.5.4 Add card reveal mechanics (Magic cards, Eye of Sauron effects)
+    - [ ] 5.5.5 Create card selection UI components for human player
+  - [ ] 5.6 Implement all combat card ability handlers (Magic, Noble Sacrifice, etc.) 
+  - [ ] 5.7 Build retreat mechanics with direction validation 
+  - [ ] 5.8 Create test scenarios for battle resolution (including Aragorn vs Shelob example) 
 
 - [ ] 6.0 Create Web UI Components and Game Interface (Battle & General)
   - [ ] 6.1 Build BattleDialog component for step-by-step battle resolution 

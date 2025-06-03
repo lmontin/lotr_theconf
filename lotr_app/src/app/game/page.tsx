@@ -35,8 +35,9 @@ const GamePage: React.FC = () => {
   }, []); // Empty dependency array ensures this runs once on mount
 
   const handleGameUpdate = () => {
-    setUpdateTrigger(prev => prev + 1); // Increment to trigger re-render
-    console.log("Game update triggered");
+    // Force a re-render by incrementing the trigger
+    setUpdateTrigger(prev => prev + 1);
+    console.log("Game update triggered, updateTrigger:", updateTrigger + 1);
   };
 
   if (!gameState) {

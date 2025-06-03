@@ -20,26 +20,28 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onGameUpdate }) => {
   const allCharacters = gameState.getAllCharacters();
   const allRegions = gameState.getAllRegions();
 
-  const stableOnGameUpdate = useCallback(onGameUpdate, [onGameUpdate]);
-
   useEffect(() => {
-    console.log("GameBoard re-rendered due to gameState or onGameUpdate change.");
-    // If a character was selected, and the game state changed (e.g. character moved),
-    // recalculate legal moves for the currently selected character if they still exist.
+    // If a character was selected, calculate legal moves for them
     if (selectedCharacterId) {
       const character = gameState.getCharacterById(selectedCharacterId);
       if (character && !character.defeated) {
+        console.log("Calculating legal moves for selected character:", character.name);
         const moves = getLegalMoves(character, gameState);
         setLegalMoves(moves);
         setLegalMoveRegionIds(moves.map(move => move.destinationRegionId));
       } else {
         // Character might have been defeated or removed, so clear selection
+        console.log("Selected character not found or defeated, clearing selection");
         setSelectedCharacterId(null);
         setLegalMoves([]);
         setLegalMoveRegionIds([]);
       }
+    } else {
+      // No character selected, clear legal moves
+      setLegalMoves([]);
+      setLegalMoveRegionIds([]);
     }
-  }, [gameState, selectedCharacterId, stableOnGameUpdate]);
+  }, [selectedCharacterId]); // Only depend on selectedCharacterId to avoid infinite re-renders
 
   const handleCharacterClick = (characterId: string) => {
     const character = gameState.getCharacterById(characterId);
