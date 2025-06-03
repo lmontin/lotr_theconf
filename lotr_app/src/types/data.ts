@@ -2,7 +2,7 @@ export type Faction = "Fellowship" | "Sauron";
 
 export type GamePhase = 'SETUP' | 'FELLOWSHIP_MOVE' | 'FELLOWSHIP_ACTION' | 'SAURON_MOVE' | 'SAURON_ACTION' | 'UPKEEP' | 'GAME_OVER';
 
-export type MoveType = 'FORWARD' | 'RIVER' | 'SEA' | 'FELLOWSHIP_SPECIAL_FORWARD' | 'RETREAT' | 'SPECIAL';
+export type MoveType = 'FORWARD' | 'RIVER' | 'SEA' | 'FELLOWSHIP_SPECIAL_FORWARD' | 'RETREAT' | 'SPECIAL' | 'TUNNEL' | 'SPECIAL_ATTACK';
 
 export interface IMoveOption {
   type: MoveType;

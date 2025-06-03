@@ -313,6 +313,11 @@ export class GameState {
             this.log(`Move failed: Target region ${toRegionId} not found.`);
             return false;
         }
+        // Check if character is defeated - defeated characters cannot move
+        if (character.defeated) {
+            this.log(`Move failed: Character ${character.name} is defeated and cannot move.`);
+            return false;
+        }
         const fromRegionId = this.regionCharIndex.regionOf(characterId);
         if (fromRegionId) {
             this.regionCharIndex.moveCharacter(characterId, toRegionId);
