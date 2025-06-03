@@ -11,12 +11,21 @@ const gameData: IGameData = rawGameData as IGameData;
 
 const GamePage: React.FC = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const [gameLog, setGameLog] = useState<string[]>([]);
   const [updateTrigger, setUpdateTrigger] = useState(0); // For forcing updates
 
   useEffect(() => {
     // Initialize GameState on the client side
     const newGameState = new GameState(gameData);
-    
+
+    // Patch the log method to update the React state log
+    (newGameState as any).log = (message: string) => {
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      setGameLog(prev => [...prev, `[${time}] [Turn ${newGameState.getTurn()} - ${newGameState.getCurrentPlayer()} - ${newGameState.getCurrentPhase()}]: ${message}`]);
+    };
+
     // Call the random placement function for each faction
     newGameState.randomlyPlaceFactionCharacters('Fellowship');
     newGameState.randomlyPlaceFactionCharacters('Sauron');
@@ -39,7 +48,7 @@ const GamePage: React.FC = () => {
       <h1 className="text-3xl sm:text-4xl font-bold mb-6 sm:mb-8">Lord of the Rings Game</h1>
       <GameBoard gameState={gameState} onGameUpdate={handleGameUpdate} />
       <div className="w-full max-w-4xl mt-6">
-        <GameLog log={gameState.gameLog} gameState={gameState} />
+        <GameLog log={gameLog} gameState={gameState} />
       </div>
     </main>
   );

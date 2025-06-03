@@ -75,7 +75,6 @@ export class GameState {
   private currentPhase: GamePhase;
   private currentPlayer: Faction;
   public winner: Faction | 'Draw' | null;
-  public gameLog: string[];
   public battleHistory: any[]; // Added for battle outcomes
   public revealedCharacters: Set<string>; // Added to track revealed characters
   public activeBattle: any | null; // Added for ongoing battle state
@@ -102,7 +101,6 @@ export class GameState {
     this.currentPhase = 'SETUP';
     this.currentPlayer = 'Sauron'; // Sauron goes first
     this.winner = null;
-    this.gameLog = [];
     this.battleHistory = [];
     this.revealedCharacters = new Set<string>();
     this.activeBattle = null;
@@ -140,12 +138,9 @@ export class GameState {
     });
   }
 
-  public log(message: string): void {
-    // Add time as hh:mm:ss
-    const now = new Date();
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    const time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-    this.gameLog.push(`[${time}] [Turn ${this.turn} - ${this.currentPlayer} - ${this.currentPhase}]: ${message}`);
+  // Logging is now handled outside GameState
+  public log(_message: string): void {
+    // No-op: log is managed externally
   }
 
   public logBattle(battleData: any): void {
