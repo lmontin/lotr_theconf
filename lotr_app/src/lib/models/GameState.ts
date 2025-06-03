@@ -1,3 +1,4 @@
+import { resolveSimpleBattle } from '../systems/BattleSystem';
 
 import { ICharacter, IRegion, ICombatCard } from '../../types/data';
 
@@ -99,7 +100,7 @@ export class GameState {
   constructor(gameData: { characters: ICharacter[], regions: IRegion[], combatCards: ICombatCard[] }) {
     this.turn = 1;
     this.currentPhase = 'SETUP';
-    this.currentPlayer = 'Fellowship';
+    this.currentPlayer = 'Sauron'; // Sauron goes first
     this.winner = null;
     this.gameLog = [];
     this.battleHistory = [];
@@ -121,7 +122,7 @@ export class GameState {
     this.characterInstances = new Map();
     this.initializeCharacters(gameData.characters);
 
-    this.log('Game initialized. Turn 1, Phase: SETUP, Player: Fellowship');
+    this.log('Game initialized. Turn 1, Phase: SETUP, Player: Sauron');
   }
 
   private initializeRegions(): void {
@@ -140,8 +141,11 @@ export class GameState {
   }
 
   public log(message: string): void {
-    // console.log(message); // Commented out to reduce test noise
-    this.gameLog.push(`[Turn ${this.turn} - ${this.currentPlayer} - ${this.currentPhase}]: ${message}`);
+    // Add time as hh:mm:ss
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    this.gameLog.push(`[${time}] [Turn ${this.turn} - ${this.currentPlayer} - ${this.currentPhase}]: ${message}`);
   }
 
   public logBattle(battleData: any): void {
@@ -217,38 +221,15 @@ export class GameState {
   }
 
   // Placeholder for advancing turn and phase
-  public nextPhase(): void { // Renamed from advancePhase to match test usage
-    // Basic phase progression logic (can be expanded)
-    switch (this.currentPhase) {
-      case 'SETUP':
-        this.currentPhase = 'FELLOWSHIP_MOVE';
-        this.currentPlayer = 'Fellowship';
-        break;
-      case 'FELLOWSHIP_MOVE':
-        this.currentPhase = 'FELLOWSHIP_ACTION';
-        break;
-      case 'FELLOWSHIP_ACTION':
-        this.currentPhase = 'SAURON_MOVE';
-        this.currentPlayer = 'Sauron';
-        break;
-      case 'SAURON_MOVE':
-        this.currentPhase = 'SAURON_ACTION';
-        break;
-      case 'SAURON_ACTION':
-        this.currentPhase = 'UPKEEP';
-        this.currentPlayer = 'Fellowship'; // Or determine based on game rules
-        this.turn++;
-        break;
-      case 'UPKEEP':
-        this.currentPhase = 'FELLOWSHIP_MOVE';
-        break;
-      case 'GAME_OVER':
-        // No phase change
-        break;
-      default:
-        this.log('Unknown game phase');
+  public nextTurn(): void {
+    // Alternate player each turn, only one move per turn
+    if (this.currentPlayer === 'Sauron') {
+      this.currentPlayer = 'Fellowship';
+    } else {
+      this.currentPlayer = 'Sauron';
+      this.turn++;
     }
-    this.log(`Phase advanced to ${this.currentPhase}. Current player: ${this.currentPlayer}. Turn: ${this.turn}`);
+    this.log(`Turn advanced. Current player: ${this.currentPlayer}. Turn: ${this.turn}`);
   }
 
   // Placeholder for checking game over conditions
@@ -329,7 +310,32 @@ export class GameState {
         }
         character.setLocation(toRegionId);
         this.log(`Character ${character.name} moved to ${toRegion.name}.`);
-        // Potentially trigger other game events here (e.g., revealing character, battle)
+
+        // Simple battle trigger: if after moving, there is an enemy in the region, resolve a simple battle
+        const occupants = toRegion.getOccupants();
+        const enemies = occupants.filter(c => c.faction !== character.faction && !c.defeated);
+        if (enemies.length > 0) {
+            // For now, just battle the first enemy found
+            const defender = enemies[0];
+            const result = resolveSimpleBattle(character, defender, this);
+            // Mark loser as defeated
+            if (!result.tie && result.loser) {
+                result.loser.setDefeated(true);
+                // Remove defeated character from the board (set location to null)
+                this.setCharacterLocation(result.loser.id, null);
+            }
+            // Optionally, log the battle result in battleHistory
+            this.logBattle({
+                attacker: character.name,
+                defender: defender.name,
+                winner: result.winner ? result.winner.name : null,
+                loser: result.loser ? result.loser.name : null,
+                tie: result.tie,
+                log: result.log,
+                turn: this.turn,
+                phase: this.currentPhase
+            });
+        }
         return true;
     }
   // --- New region/character view helpers ---

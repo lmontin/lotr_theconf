@@ -55,12 +55,12 @@
   - [x] 4.1 Build GameBoard component with region layout matching the game board 
   - [x] 4.2 Create CharacterPiece component with concealment display (hidden/revealed states) 
   - [x] 4.3 Implement drag-and-drop or click-to-move movement interface 
-  - [ ] 4.4 Create a display an on screen game log section at bottom of screen that  shows what objects/elements of game state are changed. log updates every game state change. 
+  - [x] 4.4 Create a display an on screen game log section at bottom of screen that  shows what objects/elements of game state are changed. log updates every game state change. 
 
 
 - [ ] 5.0 Build Battle Resolution System 
-  - [ ] 5.1 Build 4-step battle resolution system (reveal, abilities, cards, strength comparison) 
-  - [ ] 5.2 Build Simple Battle syetm only using character strength and no cards. 
+  - [ ] 5.1 Build Simple Battle syetm only using character strength and no cards. 
+  - [ ] 5.2 Build 4-step battle resolution system (reveal, abilities, cards, strength comparison) 
   - [ ] 5.3 Implement ability trigger system with proper timing (BATTLE_START, RESOLVE_CARDS, etc.) 
   - [ ] 5.4 Create all character ability handlers (Frodo retreat, Sam substitute, etc.) 
   - [ ] 5.5 Implement all combat card ability handlers (Magic, Noble Sacrifice, etc.) 

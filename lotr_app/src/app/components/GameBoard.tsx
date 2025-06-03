@@ -72,17 +72,14 @@ const GameBoard: React.FC<GameBoardProps> = ({ gameState, onGameUpdate }) => {
         const moveSuccess = gameState.moveCharacter(selectedCharacterId, regionId);
 
         if (moveSuccess) {
-          console.log("Move successful via GameState method.");
-          // Deselect character and clear legal moves *before* calling onGameUpdate
-          // to ensure the UI reflects the new state correctly before any potential re-calculation of moves.
+          // After a successful move, advance the turn
+          gameState.nextTurn();
           setSelectedCharacterId(null);
           setLegalMoves([]);
           setLegalMoveRegionIds([]);
           onGameUpdate(); 
         } else {
           console.log("Move failed via GameState method. Character may remain selected with old legal moves.");
-          // Optionally, re-fetch legal moves if the failed move attempt could change game state affecting them
-          // For now, we assume a failed move doesn't change legal moves, but this might need adjustment.
         }
       } else {
         console.error('Move failed: Character or target region not found.');
