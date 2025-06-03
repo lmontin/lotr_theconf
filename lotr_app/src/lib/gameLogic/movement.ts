@@ -47,13 +47,17 @@ export function getLegalMoves(character: Character, gameState: GameState, contex
   const moves: LegalMove[] = [];
   const characterLocation = character.getLocation();
 
+  console.log(`[getLegalMoves] Character: ${character.name} (${character.id}), Faction: ${character.faction}, Location: ${characterLocation}`);
+
   if (!characterLocation || character.defeated) {
+    console.log('[getLegalMoves] No location or character defeated. Returning empty moves.');
     return moves;
   }
 
   const currentRegionModel = gameState.getRegionById(characterLocation);
   if (!currentRegionModel) {
     gameState.log(`Error: Current region for ${character.name} (${character.id}) not found.`);
+    console.log(`[getLegalMoves] Current region not found for ${character.name}. Returning empty moves.`);
     return moves;
   }
 
@@ -68,11 +72,15 @@ export function getLegalMoves(character: Character, gameState: GameState, contex
 
   // 1. Regular forward movement
   const forwardRegionIds = character.faction === ("Fellowship" as Faction) ? currentRegionModel.fellowshipAdjacent : currentRegionModel.sauronAdjacent;
+  console.log(`[getLegalMoves] Forward region IDs for ${character.name}:`, forwardRegionIds);
   if (forwardRegionIds) {
     for (const destId of forwardRegionIds) {
       const destRegionModel = gameState.getRegionById(destId);
+      console.log(`[getLegalMoves] Checking forward move to ${destId}:`, destRegionModel ? 'Region found' : 'Region not found');
       if (destRegionModel) {
-        if (canEnterRegion(character, destRegionModel, gameState)) {
+        const canEnter = canEnterRegion(character, destRegionModel, gameState);
+        console.log(`[getLegalMoves] Can enter ${destId}?`, canEnter);
+        if (canEnter) {
           moves.push({ type: 'FORWARD' as MoveType, destinationRegionId: destId });
         }
       }
@@ -84,23 +92,24 @@ export function getLegalMoves(character: Character, gameState: GameState, contex
     if (currentRegionModel.fellowshipSpecialMovement) {
       for (const specialDestId of currentRegionModel.fellowshipSpecialMovement) {
         const specialDestRegionModel = gameState.getRegionById(specialDestId);
-        
+        console.log(`[getLegalMoves] Checking special move to ${specialDestId}:`, specialDestRegionModel ? 'Region found' : 'Region not found');
         if (specialDestRegionModel && canEnterRegion(character, specialDestRegionModel, gameState)) {
           const currentSpecial = currentRegionModel.special;
           const destSpecial = specialDestRegionModel.special;
           let moveType: MoveType | null = null;
-          
           const currentHasRiverAccess = Array.isArray(currentSpecial) ? currentSpecial.includes('RiverAccess') : currentSpecial === 'RiverAccess';
           const destHasRiverAccess = Array.isArray(destSpecial) ? destSpecial.includes('RiverAccess') : destSpecial === 'RiverAccess';
-
           if (currentHasRiverAccess && destHasRiverAccess) {
             moveType = 'RIVER' as MoveType;
+            if (currentRegionModel.id === 'REGION_EREGION' && specialDestRegionModel.id === 'REGION_FANGORN') {
+              gameState.log('DIAGNOSTIC (Eregion to Fangorn Path): Determined move type as RIVER.');
+            }
           } else if (currentRegionModel.id === 'REGION_EREGION' && specialDestRegionModel.id === 'REGION_FANGORN') {
             moveType = 'TUNNEL' as MoveType;
+            gameState.log('DIAGNOSTIC (Eregion to Fangorn Path): Determined move type as TUNNEL.');
           } else {
             moveType = 'FELLOWSHIP_SPECIAL_FORWARD' as MoveType;
           }
-          
           if (moveType) {
             moves.push({ type: moveType, destinationRegionId: specialDestId });
           }
@@ -114,14 +123,17 @@ export function getLegalMoves(character: Character, gameState: GameState, contex
     moveType: move.type,
     destination: move.destinationRegionId
   }));
+  console.log(`[getLegalMoves] Moves before abilities:`, moves);
 
   // 4. Trigger abilities that might add additional moves
   triggerAbilities('CHECK_MOVE_LEGALITY', movementContext);
+  console.log(`[getLegalMoves] movementContext.additionalMoves after abilities:`, movementContext.additionalMoves);
 
   // 5. Add any additional moves granted by abilities
   if (movementContext.additionalMoves && movementContext.additionalMoves.length > 0) {
     for (const additionalMove of movementContext.additionalMoves) {
       const destRegionModel = gameState.getRegionById(additionalMove.destination);
+      console.log(`[getLegalMoves] Ability additional move to ${additionalMove.destination}:`, destRegionModel ? 'Region found' : 'Region not found');
       if (destRegionModel && canEnterRegion(character, destRegionModel, gameState)) {
         moves.push({ 
           type: additionalMove.moveType as MoveType, 
@@ -131,6 +143,7 @@ export function getLegalMoves(character: Character, gameState: GameState, contex
     }
   }
 
+  console.log(`[getLegalMoves] Final moves for ${character.name}:`, moves);
   return moves;
 }
 

@@ -67,9 +67,21 @@ export type Faction = 'Fellowship' | 'Sauron';
 
 export class GameState {
   // --- Add setActiveBattle for test compatibility ---
+  public gameLog: string[] = [];
   public setActiveBattle(battle: any): void {
     this.activeBattle = battle;
-    this.log(`Active battle set: ${JSON.stringify(battle)}`);
+    // Avoid circular structure in log: log only summary info
+    if (battle && typeof battle === 'object') {
+      const summary = {
+        region: battle.regionId || battle.region || undefined,
+        attackers: Array.isArray(battle.attackers) ? battle.attackers.map((c: any) => c.id || c.name) : undefined,
+        defenders: Array.isArray(battle.defenders) ? battle.defenders.map((c: any) => c.id || c.name) : undefined,
+        type: battle.type || undefined
+      };
+      this.log(`Active battle set: ${JSON.stringify(summary)}`);
+    } else {
+      this.log(`Active battle set.`);
+    }
   }
   private turn: number;
   private currentPhase: GamePhase;
@@ -139,8 +151,8 @@ export class GameState {
   }
 
   // Logging is now handled outside GameState
-  public log(_message: string): void {
-    // No-op: log is managed externally
+  public log(message: string): void {
+    this.gameLog.push(message);
   }
 
   public logBattle(battleData: any): void {

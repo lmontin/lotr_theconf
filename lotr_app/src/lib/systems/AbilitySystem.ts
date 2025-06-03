@@ -594,8 +594,13 @@ function initializeDefaultHandlers(): void {
     
     for (const regionId of allAdjacent) {
       const region = gameState.getRegionById(regionId);
-      if (region && region.containsEnemy('Fellowship')) {
-        // Aragorn can attack in any direction
+      // Only allow Aragorn to attack in the correct direction for his faction
+      if (
+        region &&
+        region.containsEnemy('Fellowship') &&
+        source.faction === 'Fellowship' &&
+        (currentRegion.fellowshipAdjacent || []).includes(regionId)
+      ) {
         additionalMoves.push({
           moveType: 'SPECIAL_ATTACK',
           destination: regionId
@@ -604,8 +609,12 @@ function initializeDefaultHandlers(): void {
     }
     
     if (additionalMoves.length > 0) {
-      movementContext.additionalMoves = additionalMoves;
-      gameState.log(`${source.name} can attack in any direction`);
+      // Prevent duplicates in additionalMoves
+      const uniqueMoves = additionalMoves.filter((move, idx, arr) =>
+        arr.findIndex(m => m.destination === move.destination && m.moveType === move.moveType) === idx
+      );
+      movementContext.additionalMoves = uniqueMoves;
+      gameState.log(`${source.name} can attack in correct direction`);
     }
   });
 
@@ -870,11 +879,13 @@ function initializeDefaultHandlers(): void {
     if (!(source instanceof CharacterModel) || source.name !== 'Flying Nazgûl') {
       return;
     }
-    
     const movementContext = context as MovementContext;
+    // Only add moves if this ability is being checked for the character in question
+    if (!movementContext.character || source.id !== movementContext.character.id) {
+      return;
+    }
     const gameState = movementContext.gameState;
     const additionalMoves: Array<{ moveType: string; destination: string }> = [];
-    
     // Check all regions for single Fellowship characters
     const allRegions = gameState.getAllRegions();
     for (const region of allRegions) {
@@ -885,7 +896,6 @@ function initializeDefaultHandlers(): void {
           destination: region.id
         });
       }
-      
       // Also check mountain regions with Fellowship characters for sideways movement
       if (region.special && 
           (region.special === 'Mountains' || 
@@ -897,7 +907,6 @@ function initializeDefaultHandlers(): void {
         });
       }
     }
-    
     if (additionalMoves.length > 0) {
       movementContext.additionalMoves = additionalMoves;
       gameState.log(`${source.name} can fly to regions with Fellowship characters`);
