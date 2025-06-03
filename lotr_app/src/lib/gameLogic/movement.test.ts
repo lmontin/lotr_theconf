@@ -88,12 +88,8 @@ describe('Movement Logic', () => {
 
         // Debug: print the special movement property and legal moves
         const eregion = gameState.getRegionById(eregionId);
-        // eslint-disable-next-line no-console
-        console.log('DEBUG fellowshipSpecialMovement:', eregion?.fellowshipSpecialMovement);
 
         const legalMoves = getLegalMoves(aragorn, gameState);
-        // eslint-disable-next-line no-console
-        console.log('DEBUG legalMoves:', legalMoves);
 
         const fangornMove = legalMoves.find(move => move.destinationRegionId === 'REGION_FANGORN');
         expect(fangornMove).toBeDefined();
@@ -316,11 +312,8 @@ describe('Movement Logic', () => {
           const before = shireRegion.getOccupants('Sauron').length;
           moveCharacter(charId, shireId, gameState, 'FORWARD');
           const after = shireRegion.getOccupants('Sauron').length;
-          console.log(`DEBUG: Moved ${charId} from ${fromRegions[idx]} to Shire. Before: ${before}, After: ${after}`);
-          console.log('DEBUG: Last move log:', gameState.gameLog.at(-1));
         }
       });
-      console.log('DEBUG: Sauron occupants in Shire after 3 moves:', shireRegion.getOccupants('Sauron').map(c => c.id));
       expect(shireRegion.getOccupants('Sauron').length).toBe(3);
       // Move a 4th Sauron character in
       const fourthChar = gameState.getCharacterById('CHAR_SAURON_FLYING_NAZGUL');

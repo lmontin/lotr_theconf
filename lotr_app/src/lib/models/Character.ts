@@ -123,6 +123,9 @@ export class CharacterModel implements ICharacter { // Changed class name to Cha
   }
 
   public getAbilities(): string[] {
-    return this.currentVersionData.specialAbilities || [];
+    if (this.currentVersionData.abilities) {
+      return this.currentVersionData.abilities.map(ability => ability.id);
+    }
+    return (this.currentVersionData as any).specialAbilities || [];
   }
 }

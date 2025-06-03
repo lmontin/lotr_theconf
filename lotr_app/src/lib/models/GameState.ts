@@ -286,7 +286,11 @@ export class GameState {
   }
 
     // Method to move a character from one region to another
-    public moveCharacter(characterId: string, toRegionId: string): boolean {
+    public moveCharacter(characterId: string, toRegionId: string, options: { 
+      triggerBattle?: boolean, 
+      isSetup?: boolean, 
+      isRetreat?: boolean 
+    } = {}): boolean {
         const character = this.getCharacterById(characterId);
         const toRegion = this.getRegionById(toRegionId);
         if (!character) {
@@ -306,40 +310,51 @@ export class GameState {
         character.setLocation(toRegionId);
         this.log(`Character ${character.name} moved to ${toRegion.name}.`);
 
-        // Simple battle trigger: if after moving, there is an enemy in the region, resolve a simple battle
-        const occupants = toRegion.getOccupants();
-        const enemies = occupants.filter(c => c.faction !== character.faction && !c.defeated);
-        if (enemies.length > 0) {
-            // For now, just battle the first enemy found
-            const defender = enemies[0];
-            // Use the new 4-step battle system
-            const result = resolveFullBattle(character, defender, this);
-            // Mark loser as defeated
-            if (result.outcome !== 'MUTUAL_DEFEAT' && result.outcome) {
-                if (result.outcome === 'ATTACKER_WIN') {
-                    defender.setDefeated?.(true);
-                    this.setCharacterLocation(defender.id, null);
-                } else if (result.outcome === 'DEFENDER_WIN') {
+        // Only trigger battles under specific conditions
+        const shouldTriggerBattle = 
+          options.triggerBattle === true || // Explicitly requested
+          (!options.isSetup && // Not during setup
+           !options.isRetreat && // Not during retreat moves
+           options.triggerBattle !== false && // Not explicitly disabled
+           (this.currentPhase === 'FELLOWSHIP_MOVE' || this.currentPhase === 'SAURON_MOVE')); // Only during movement phases
+
+        if (shouldTriggerBattle) {
+            // Simple battle trigger: if after moving, there is an enemy in the region, resolve a simple battle
+            const occupants = toRegion.getOccupants();
+            const enemies = occupants.filter(c => c.faction !== character.faction && !c.defeated);
+            if (enemies.length > 0) {
+                // For now, just battle the first enemy found
+                const defender = enemies[0];
+                this.log(`Battle triggered: ${character.name} vs ${defender.name}`);
+                // Use the new 4-step battle system
+                const result = resolveFullBattle(character, defender, this);
+                // Mark loser as defeated
+                if (result.outcome !== 'MUTUAL_DEFEAT' && result.outcome) {
+                    if (result.outcome === 'ATTACKER_WIN') {
+                        defender.setDefeated?.(true);
+                        this.setCharacterLocation(defender.id, null);
+                    } else if (result.outcome === 'DEFENDER_WIN') {
+                        character.setDefeated?.(true);
+                        this.setCharacterLocation(character.id, null);
+                    }
+                } else if (result.outcome === 'MUTUAL_DEFEAT') {
                     character.setDefeated?.(true);
+                    defender.setDefeated?.(true);
                     this.setCharacterLocation(character.id, null);
+                    this.setCharacterLocation(defender.id, null);
                 }
-            } else if (result.outcome === 'MUTUAL_DEFEAT') {
-                character.setDefeated?.(true);
-                defender.setDefeated?.(true);
-                this.setCharacterLocation(character.id, null);
-                this.setCharacterLocation(defender.id, null);
+                // Optionally, log the battle result in battleHistory
+                this.logBattle({
+                    attacker: character.name,
+                    defender: defender.name,
+                    winner: result.outcome === 'ATTACKER_WIN' ? character.name : result.outcome === 'DEFENDER_WIN' ? defender.name : null,
+                    loser: result.outcome === 'ATTACKER_WIN' ? defender.name : result.outcome === 'DEFENDER_WIN' ? character.name : null,
+                    tie: result.outcome === 'MUTUAL_DEFEAT',
+                    log: result.log ? result.log.join('\n') : '',
+                    turn: this.turn,
+                    phase: this.currentPhase
+                });
             }
-            // Optionally, log the battle result in battleHistory
-            this.logBattle({
-                attacker: character.name,
-                defender: defender.name,
-                winner: result.outcome === 'ATTACKER_WIN' ? character.name : result.outcome === 'DEFENDER_WIN' ? defender.name : null,
-                loser: result.outcome === 'ATTACKER_WIN' ? defender.name : result.outcome === 'DEFENDER_WIN' ? character.name : null,
-                tie: result.outcome === 'MUTUAL_DEFEAT',
-                log: result.log ? result.log.join('\n') : '',
-                turn: this.turn,
-                phase: this.currentPhase
-            });
         }
         return true;
     }

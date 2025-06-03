@@ -2,6 +2,7 @@ import { GameState } from '../models/GameState';
 import { CharacterModel as Character } from '../models/Character';
 import { RegionModel as Region } from '../models/Region';
 import { Faction, MoveType, IMoveOption, IMoveLogEntry, GamePhase } from '../../types/data';
+import { triggerAbilities, MovementContext } from '../systems/AbilitySystem';
 
 export interface LegalMove {
   type: MoveType;
@@ -50,17 +51,26 @@ export function getLegalMoves(character: Character, gameState: GameState, contex
     return moves;
   }
 
-  const currentRegionModel = gameState.getRegionById(characterLocation); // MODIFIED
+  const currentRegionModel = gameState.getRegionById(characterLocation);
   if (!currentRegionModel) {
     gameState.log(`Error: Current region for ${character.name} (${character.id}) not found.`);
     return moves;
   }
 
+  // Create movement context for ability system
+  const movementContext: MovementContext = {
+    character,
+    fromRegion: characterLocation,
+    gameState,
+    availableMoves: [],
+    additionalMoves: []
+  };
+
   // 1. Regular forward movement
   const forwardRegionIds = character.faction === ("Fellowship" as Faction) ? currentRegionModel.fellowshipAdjacent : currentRegionModel.sauronAdjacent;
   if (forwardRegionIds) {
     for (const destId of forwardRegionIds) {
-      const destRegionModel = gameState.getRegionById(destId); // MODIFIED
+      const destRegionModel = gameState.getRegionById(destId);
       if (destRegionModel) {
         if (canEnterRegion(character, destRegionModel, gameState)) {
           moves.push({ type: 'FORWARD' as MoveType, destinationRegionId: destId });
@@ -71,76 +81,56 @@ export function getLegalMoves(character: Character, gameState: GameState, contex
 
   // 2. Special paths (Fellowship only)
   if (character.faction === ("Fellowship" as Faction)) {
-    if (currentRegionModel.id === 'REGION_EREGION') { // Log specifically for Eregion
-        if (currentRegionModel.fellowshipSpecialMovement && currentRegionModel.fellowshipSpecialMovement.length > 0) {
-            gameState.log(`DIAGNOSTIC (Eregion): fellowshipSpecialMovement for ${currentRegionModel.name} (${currentRegionModel.id}): ${JSON.stringify(currentRegionModel.fellowshipSpecialMovement)}. Character: ${character.name}`);
-        } else {
-            gameState.log(`DIAGNOSTIC (Eregion): fellowshipSpecialMovement is UNDEFINED or EMPTY for ${currentRegionModel.name} (${currentRegionModel.id}). Character: ${character.name}`);
-        }
-    }
-
     if (currentRegionModel.fellowshipSpecialMovement) {
-        for (const specialDestId of currentRegionModel.fellowshipSpecialMovement) {
-            const specialDestRegionModel = gameState.getRegionById(specialDestId); // MODIFIED
+      for (const specialDestId of currentRegionModel.fellowshipSpecialMovement) {
+        const specialDestRegionModel = gameState.getRegionById(specialDestId);
+        
+        if (specialDestRegionModel && canEnterRegion(character, specialDestRegionModel, gameState)) {
+          const currentSpecial = currentRegionModel.special;
+          const destSpecial = specialDestRegionModel.special;
+          let moveType: MoveType | null = null;
+          
+          const currentHasRiverAccess = Array.isArray(currentSpecial) ? currentSpecial.includes('RiverAccess') : currentSpecial === 'RiverAccess';
+          const destHasRiverAccess = Array.isArray(destSpecial) ? destSpecial.includes('RiverAccess') : destSpecial === 'RiverAccess';
 
-            if (currentRegionModel.id === 'REGION_EREGION') { // Log loop processing for Eregion
-                gameState.log(`DIAGNOSTIC (Eregion Special Loop): Processing specialDestId: ${specialDestId}. Target Model Found: ${!!specialDestRegionModel}. Character: ${character.name}`);
-            }
-
-            if (specialDestId === 'REGION_FANGORN' && currentRegionModel.id === 'REGION_EREGION') {
-                gameState.log(`DIAGNOSTIC (Eregion to Fangorn Path): Entered specific check for Fangorn from Eregion. Character: ${character.name}`);
-                if (!specialDestRegionModel) {
-                    gameState.log(`DIAGNOSTIC (Eregion to Fangorn Path): Destination REGION_FANGORN model not found.`);
-                    continue;
-                }
-                if (!canEnterRegion(character, specialDestRegionModel, gameState)) {
-                    gameState.log(`DIAGNOSTIC (Eregion to Fangorn Path): Cannot enter REGION_FANGORN. canEnterRegion for ${character.name} returned false. Region state: Occupants=${JSON.stringify(specialDestRegionModel.getOccupants())}, FellowshipOccupants=${specialDestRegionModel.getOccupants("Fellowship" as Faction).length}, SauronOccupants=${specialDestRegionModel.getOccupants("Sauron" as Faction).length}`);
-                    continue;
-                }
-                const currentSpecial = currentRegionModel.special;
-                const destSpecial = specialDestRegionModel.special;
-                let moveType: MoveType | null = null;
-
-                const currentHasRiverAccess = Array.isArray(currentSpecial) ? currentSpecial.includes('RiverAccess') : currentSpecial === 'RiverAccess';
-                const destHasRiverAccess = Array.isArray(destSpecial) ? destSpecial.includes('RiverAccess') : destSpecial === 'RiverAccess';
-
-                if (currentHasRiverAccess && destHasRiverAccess) {
-                    moveType = 'RIVER' as MoveType;
-                    gameState.log(`DIAGNOSTIC (Eregion to Fangorn Path): Determined move type as RIVER.`);
-                } else if (currentRegionModel.id === 'REGION_EREGION' && specialDestRegionModel.id === 'REGION_FANGORN') {
-                    moveType = 'TUNNEL' as MoveType;
-                    gameState.log(`DIAGNOSTIC (Eregion to Fangorn Path): Determined move type as TUNNEL.`);
-                } else {
-                    moveType = 'FELLOWSHIP_SPECIAL_FORWARD' as MoveType;
-                    gameState.log(`DIAGNOSTIC (Eregion to Fangorn Path): Defaulted to FELLOWSHIP_SPECIAL_FORWARD. CurrentSpecial: ${JSON.stringify(currentSpecial)}, DestSpecial: ${JSON.stringify(destSpecial)}, CurrentRiver: ${currentHasRiverAccess}, DestRiver: ${destHasRiverAccess}`);
-                }
-                if (moveType) {
-                    moves.push({ type: moveType, destinationRegionId: specialDestId });
-                    gameState.log(`DIAGNOSTIC (Eregion to Fangorn Path): Added move ${moveType} to ${specialDestId} for ${character.name}.`);
-                } else {
-                    gameState.log(`DIAGNOSTIC (Eregion to Fangorn Path): Move type to REGION_FANGORN is null/undefined. Char: ${character.name}, CurrentSpecial: ${JSON.stringify(currentSpecial)}, DestSpecial: ${JSON.stringify(destSpecial)}`);
-                }
-            } else { // For other special destinations or other current regions
-                if (specialDestRegionModel && canEnterRegion(character, specialDestRegionModel, gameState)) {
-                    const currentSpecial = currentRegionModel.special;
-                    const destSpecial = specialDestRegionModel.special;
-                    let moveType: MoveType | null = null;
-                    const currentHasRiverAccess = Array.isArray(currentSpecial) ? currentSpecial.includes('RiverAccess') : currentSpecial === 'RiverAccess';
-                    const destHasRiverAccess = Array.isArray(destSpecial) ? destSpecial.includes('RiverAccess') : destSpecial === 'RiverAccess';
-
-                    if (currentHasRiverAccess && destHasRiverAccess) {
-                        moveType = 'RIVER' as MoveType;
-                    } else {
-                        moveType = 'FELLOWSHIP_SPECIAL_FORWARD' as MoveType;
-                    }
-                    if (moveType) {
-                        moves.push({ type: moveType, destinationRegionId: specialDestId });
-                      }
-                }
-            }
+          if (currentHasRiverAccess && destHasRiverAccess) {
+            moveType = 'RIVER' as MoveType;
+          } else if (currentRegionModel.id === 'REGION_EREGION' && specialDestRegionModel.id === 'REGION_FANGORN') {
+            moveType = 'TUNNEL' as MoveType;
+          } else {
+            moveType = 'FELLOWSHIP_SPECIAL_FORWARD' as MoveType;
+          }
+          
+          if (moveType) {
+            moves.push({ type: moveType, destinationRegionId: specialDestId });
+          }
         }
+      }
     }
   }
+
+  // 3. Store available moves in context for ability system
+  movementContext.availableMoves = moves.map(move => ({
+    moveType: move.type,
+    destination: move.destinationRegionId
+  }));
+
+  // 4. Trigger abilities that might add additional moves
+  triggerAbilities('CHECK_MOVE_LEGALITY', movementContext);
+
+  // 5. Add any additional moves granted by abilities
+  if (movementContext.additionalMoves && movementContext.additionalMoves.length > 0) {
+    for (const additionalMove of movementContext.additionalMoves) {
+      const destRegionModel = gameState.getRegionById(additionalMove.destination);
+      if (destRegionModel && canEnterRegion(character, destRegionModel, gameState)) {
+        moves.push({ 
+          type: additionalMove.moveType as MoveType, 
+          destinationRegionId: additionalMove.destination 
+        });
+      }
+    }
+  }
+
   return moves;
 }
 
@@ -168,7 +158,7 @@ export function moveCharacter(
     return false;
   }
 
-  const destinationRegionModel = gameState.getRegionById(destinationRegionId); // MODIFIED
+  const destinationRegionModel = gameState.getRegionById(destinationRegionId);
   if (!destinationRegionModel) {
     gameState.log(`MOVE FAIL: ${characterModel.name} to ${destinationRegionId} - Destination region not found.`);
     return false;
@@ -180,8 +170,21 @@ export function moveCharacter(
   }
 
   const oldRegionId = characterModel.getLocation();
-  const oldRegionName = oldRegionId ? gameState.getRegionById(oldRegionId)?.name : 'off-board'; // MODIFIED
+  const oldRegionName = oldRegionId ? gameState.getRegionById(oldRegionId)?.name : 'off-board';
 
+  // Create movement context for ability system
+  const movementContext: MovementContext = {
+    character: characterModel,
+    fromRegion: oldRegionId || undefined,
+    toRegion: destinationRegionId,
+    moveType: moveType as 'NORMAL' | 'TUNNEL' | 'RIVER' | 'SPECIAL',
+    gameState
+  };
+
+  // Trigger pre-move abilities
+  triggerAbilities('MOVE_START', movementContext);
+
+  // Execute the move
   characterModel.setLocation(destinationRegionId);
 
   const moveLogEntry: IMoveLogEntry = {
@@ -198,22 +201,27 @@ export function moveCharacter(
   gameState.setLastMove(moveLogEntry);
   gameState.log(`MOVE ACTION: ${characterModel.name} (${characterModel.faction}) ${moveType} from ${oldRegionName} to ${destinationRegionModel.name}.`);
 
+  // Trigger post-move abilities
+  triggerAbilities('MOVE_END', movementContext);
+
+  // Check for battle initiation
   if (destinationRegionModel.containsEnemy(characterModel.faction)) {
     gameState.log(`Battle triggered in ${destinationRegionModel.name} involving ${characterModel.name}.`);
-    const attackersInRegion = destinationRegionModel.getOccupants(characterModel.faction).map(c => c); // getOccupants returns string[]
+    const attackersInRegion = destinationRegionModel.getOccupants(characterModel.faction).map(c => c);
     const defendingFaction = characterModel.faction === ("Fellowship" as Faction) ? ("Sauron" as Faction) : ("Fellowship" as Faction);
-    const defendersInRegion = destinationRegionModel.getOccupants(defendingFaction).map(c => c); // getOccupants returns string[]
+    const defendersInRegion = destinationRegionModel.getOccupants(defendingFaction).map(c => c);
 
     gameState.setActiveBattle({
         regionId: destinationRegionId,
         regionName: destinationRegionModel.name,
         triggeringCharacterId: characterModel.id,
         attackingFaction: characterModel.faction,
-        attackers: attackersInRegion, // these are string IDs
+        attackers: attackersInRegion,
         defendingFaction: defendingFaction,
-        defenders: defendersInRegion, // these are string IDs
+        defenders: defendersInRegion,
     });
   }
+  
   return true;
 }
 

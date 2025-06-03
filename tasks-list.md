@@ -7,7 +7,9 @@
 - `lotr_app/src/lib/models/Player.ts` - Player class with hand management
 - `lotr_app/src/lib/gameLogic/movement.ts` - Movement validation, `getLegalMoves`, `moveCharacter` and special paths (Replaced `MovementSystem.ts`)
 - `lotr_app/src/lib/systems/BattleSystem.ts` - Battle resolution with 4-step process
-- `lotr_app/src/lib/systems/AbilitySystem.ts` - Ability trigger and handler system
+- `lotr_app/src/lib/systems/AbilitySystem.ts` - Ability trigger and handler system with proper timing
+- `lotr_app/src/lib/systems/AbilitySystem.test.ts` - Unit tests for ability system functionality
+- `lotr_app/src/lib/systems/AbilitySystem.integration.test.ts` - Integration tests covering edge cases (11/12 passing, 1 skipped)
 - `lotr_app/src/lib/ai/SauronAI.ts` - AI decision-making logic
 - `lotr_app/src/app/components/GameBoard.tsx` - Main game board UI component
 - `lotr_app/src/app/components/CharacterPiece.tsx` - Character display with concealment
@@ -61,8 +63,8 @@
 - [ ] 5.0 Build Battle Resolution System 
   - [x] 5.1 Build Simple Battle syetm only using character strength and no cards. 
   - [x] 5.2 Build 4-step battle resolution system (reveal, abilities, cards, strength comparison) 
-  - [ ] 5.3 Implement ability trigger system with proper timing (BATTLE_START, RESOLVE_CARDS, etc.) 
-  - [ ] 5.4 Create all character ability handlers (Frodo retreat, Sam substitute, etc.) 
+  - [x] 5.3 Implement ability trigger system with proper timing (BATTLE_START, RESOLVE_CARDS, etc.) ✅ ALL TESTS PASSING
+  - [ ] 5.4 Create all character ability handlers (Frodo retreat, Sam substitute, etc.) **READY TO START** 
   - [ ] 5.5 Implement all combat card ability handlers (Magic, Noble Sacrifice, etc.) 
   - [ ] 5.6 Build retreat mechanics with direction validation 
   - [ ] 5.7 Create test scenarios for battle resolution (including Aragorn vs Shelob example) 

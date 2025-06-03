@@ -29,7 +29,7 @@
             {
               "id": "SAM_SUBSTITUTE",
               "text": "If in the same region as Frodo and Frodo is attacked first, may be revealed to take Frodo's place",
-              "trigger": "BATTLE_START",
+              "trigger": "PRE_BATTLE_SUBSTITUTE",
               "condition": "IS_WITH_FRODO_AND_FRODO_DEFENDING"
             },
             {

@@ -1,4 +1,8 @@
-export interface FullBattleContext {
+import { CharacterModel } from '../models/Character';
+import { GameState } from '../models/GameState';
+import { triggerAbilities, checkBattleEnd, BattleContext } from './AbilitySystem';
+
+export interface FullBattleContext extends BattleContext {
   attacker: CharacterModel;
   defender: CharacterModel;
   gameState: GameState;
@@ -6,6 +10,42 @@ export interface FullBattleContext {
   defenderCard?: any;
   log: string[];
   outcome?: 'ATTACKER_WIN' | 'DEFENDER_WIN' | 'MUTUAL_DEFEAT';
+  battlePhase?: 'REVEAL' | 'PRE_SUBSTITUTION' | 'ABILITIES' | 'CARDS' | 'STRENGTH' | 'END';
+  skipCardPlay?: boolean;
+  fellowshipCharacter?: CharacterModel;
+  sauronCharacter?: CharacterModel;
+  cardsPlayed?: { [faction: string]: any };
+}
+
+/**
+ * Calculate final strength including card bonuses and ability modifiers
+ */
+function calculateFinalStrength(character: CharacterModel, card?: any, ctx?: FullBattleContext): number {
+  let strength = character.strength;
+  
+  // Add card strength bonus
+  if (card?.strength) {
+    strength += card.strength;
+  }
+  
+  // TODO: Add ability-based strength modifiers from context
+  // This would be handled by abilities that trigger during COMPARE_STRENGTHS
+  
+  return strength;
+}
+
+/**
+ * Finalize battle by logging all events and cleaning up
+ */
+function finalizeBattle(ctx: FullBattleContext): void {
+  // Log all battle events in the game state
+  ctx.log.forEach(line => ctx.gameState.log(`[Full Battle] ${line}`));
+  
+  // Clear battle phase
+  ctx.battlePhase = 'END';
+  
+  // Trigger any final cleanup abilities
+  // (This is handled by the BATTLE_END trigger in the main function)
 }
 
 /**
@@ -26,10 +66,16 @@ export function resolveFullBattle(
     attackerCard,
     defenderCard,
     log: [],
+    battlePhase: 'REVEAL',
+    fellowshipCharacter: attacker.faction === 'Fellowship' ? attacker : defender,
+    sauronCharacter: attacker.faction === 'Sauron' ? attacker : defender,
+    cardsPlayed: {},
   };
 
   // Step 1: Reveal both characters
   ctx.log.push('Step 1: Reveal characters');
+  ctx.battlePhase = 'REVEAL';
+  
   if (!(attacker as any).isRevealed && !(attacker as any).is_revealed) {
     attacker.reveal?.();
     ctx.log.push(`${attacker.name} is revealed.`);
@@ -39,23 +85,70 @@ export function resolveFullBattle(
     ctx.log.push(`${defender.name} is revealed.`);
   }
 
-  // Step 2: Trigger character abilities (Fellowship first, then Sauron)
-  ctx.log.push('Step 2: Trigger character abilities (Fellowship, then Sauron)');
-  ctx.log.push('Skipped: Ability system not implemented.');
+  // Step 2: Pre-battle substitution check (Sam can substitute for Frodo)
+  ctx.log.push('Step 2a: Check for pre-battle substitution');
+  ctx.battlePhase = 'PRE_SUBSTITUTION';
+  
+  triggerAbilities('PRE_BATTLE_SUBSTITUTE', ctx);
+  
+  // Check if defender was substituted
+  if (checkBattleEnd(ctx)) {
+    ctx.battlePhase = 'END';
+    finalizeBattle(ctx);
+    return ctx;
+  }
+
+  // Step 2b: Trigger character abilities (Fellowship first, then Sauron)
+  ctx.log.push('Step 2b: Trigger character abilities (Fellowship, then Sauron)');
+  ctx.battlePhase = 'ABILITIES';
+  
+  triggerAbilities('BATTLE_START', ctx);
+  
+  // Check if battle ended early due to abilities (retreat, etc.)
+  if (checkBattleEnd(ctx)) {
+    ctx.battlePhase = 'END';
+    finalizeBattle(ctx);
+    return ctx;
+  }
 
   // Step 3: Card play and resolve card effects
   ctx.log.push('Step 3: Card play and resolve card effects');
-  if (attackerCard) ctx.log.push(`${attacker.name} plays card: ${attackerCard.name || '[card]'}`);
-  if (defenderCard) ctx.log.push(`${defender.name} plays card: ${defenderCard.name || '[card]'}`);
-  ctx.log.push('Skipped: Card effect resolution not implemented.');
+  ctx.battlePhase = 'CARDS';
+  
+  if (!ctx.skipCardPlay) {
+    if (attackerCard) {
+      ctx.log.push(`${attacker.name} plays card: ${attackerCard.name || '[card]'}`);
+      if (ctx.cardsPlayed) {
+        ctx.cardsPlayed[attacker.faction] = attackerCard;
+      }
+    }
+    if (defenderCard) {
+      ctx.log.push(`${defender.name} plays card: ${defenderCard.name || '[card]'}`);
+      if (ctx.cardsPlayed) {
+        ctx.cardsPlayed[defender.faction] = defenderCard;
+      }
+    }
+    
+    // Trigger card resolution abilities
+    triggerAbilities('RESOLVE_CARDS', ctx);
+  } else {
+    ctx.log.push('Card play skipped due to ability effect.');
+  }
 
   // Step 4: Compare strengths (including card bonuses)
   ctx.log.push('Step 4: Compare strengths and determine outcome');
-  const attackerStrength = attacker.strength + (attackerCard?.strength || 0);
-  const defenderStrength = defender.strength + (defenderCard?.strength || 0);
+  ctx.battlePhase = 'STRENGTH';
+  
+  // Trigger strength comparison abilities
+  triggerAbilities('COMPARE_STRENGTHS', ctx);
+  
+  const attackerStrength = calculateFinalStrength(attacker, attackerCard, ctx);
+  const defenderStrength = calculateFinalStrength(defender, defenderCard, ctx);
+  
   ctx.log.push(`${attacker.name} total strength: ${attackerStrength}`);
   ctx.log.push(`${defender.name} total strength: ${defenderStrength}`);
 
+  // Determine outcome
   if (attackerStrength > defenderStrength) {
     ctx.outcome = 'ATTACKER_WIN';
     ctx.log.push(`${attacker.name} wins the battle.`);
@@ -71,12 +164,13 @@ export function resolveFullBattle(
     defender.setDefeated?.(true);
   }
 
-  // Log all steps in the game state
-  ctx.log.forEach(line => gameState.log(`[Full Battle] ${line}`));
+  // Step 5: End-battle abilities
+  ctx.battlePhase = 'END';
+  triggerAbilities('BATTLE_END', ctx);
+  
+  finalizeBattle(ctx);
   return ctx;
 }
-import { CharacterModel } from '../models/Character';
-import { GameState } from '../models/GameState';
 
 export interface SimpleBattleResult {
   winner: CharacterModel | null;

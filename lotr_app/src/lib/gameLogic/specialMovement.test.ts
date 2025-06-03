@@ -33,21 +33,10 @@ describe('Special Movement Deep Dive', () => {
       const eregion = gameState.getRegionById('REGION_EREGION')!;
       const fangorn = gameState.getRegionById('REGION_FANGORN')!;
 
-      console.log('--- TUNNEL Test: Initial State ---');
-      console.log('Aragorn Location:', aragorn.getLocation());
-      console.log('Eregion Data:', JSON.stringify(eregion, (key, value) => key === 'game' ? undefined : value));
-      console.log('Eregion fellowshipSpecialMovement:', JSON.stringify(eregion.fellowshipSpecialMovement));
-      console.log('Fangorn Data:', JSON.stringify(fangorn, (key, value) => key === 'game' ? undefined : value));
-      console.log('Can Aragorn enter Fangorn (initial)?', canEnterRegion(aragorn, fangorn, gameState));
-
       // Spy on gameState.log to capture diagnostic messages
       const logSpy = jest.spyOn(gameState, 'log');
 
       const legalMoves = getLegalMoves(aragorn, gameState);
-
-      console.log('--- TUNNEL Test: After getLegalMoves ---');
-      console.log('Captured GameState Logs:', logSpy.mock.calls.map(call => call[0]));
-      console.log('Legal Moves Found:', JSON.stringify(legalMoves));
 
       const tunnelMove = legalMoves.find(
         (move) => move.destinationRegionId === 'REGION_FANGORN' && move.type === 'TUNNEL'
@@ -71,13 +60,6 @@ describe('Special Movement Deep Dive', () => {
       const eregionModel = gameState.getRegionById('REGION_EREGION')! as RegionModel & { special?: string | string[] };
       const fangornModel = gameState.getRegionById('REGION_FANGORN')! as RegionModel & { special?: string | string[] };
 
-      console.log('--- RIVER Test: Initial State (Before Modification) ---');
-      console.log('Aragorn Location:', aragorn.getLocation());
-      console.log('Eregion Original Special:', JSON.stringify(eregionModel.special));
-      console.log('Fangorn Original Special:', JSON.stringify(fangornModel.special));
-      console.log('Can Aragorn enter Fangorn (initial)?', canEnterRegion(aragorn, fangornModel, gameState));
-
-
       // Store original special properties to restore them later
       const originalEregionSpecial = eregionModel.special;
       const originalFangornSpecial = fangornModel.special;
@@ -92,19 +74,8 @@ describe('Special Movement Deep Dive', () => {
       // direct modification of 'special' might not be reflected unless the getter is re-evaluated.
       // The current RegionModel.isRiverAccess reads directly from `this.special` so it should be fine.
 
-      console.log('--- RIVER Test: State After Modification ---');
-      console.log('Eregion Modified Special:', JSON.stringify(eregionModel.special));
-      console.log('Fangorn Modified Special:', JSON.stringify(fangornModel.special));
-      console.log('Eregion isRiverAccess (after mod):', eregionModel.isRiverAccess); // Assuming isRiverAccess is a public getter or property
-      console.log('Fangorn isRiverAccess (after mod):', fangornModel.isRiverAccess);
-
-
       const logSpy = jest.spyOn(gameState, 'log');
       const legalMoves = getLegalMoves(aragorn, gameState);
-
-      console.log('--- RIVER Test: After getLegalMoves ---');
-      console.log('Captured GameState Logs for RIVER:', logSpy.mock.calls.map(call => call[0]));
-      console.log('Legal Moves Found (RIVER):', JSON.stringify(legalMoves));
 
       const riverMove = legalMoves.find(
         (move) => move.destinationRegionId === 'REGION_FANGORN' && move.type === 'RIVER'
