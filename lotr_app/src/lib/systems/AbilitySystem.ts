@@ -1,5 +1,6 @@
 import { CharacterModel } from '../models/Character';
 import { GameState } from '../models/GameState';
+import { logAbility, logTrace, logError } from '../utils/detailedLogger';
 
 // Ability trigger events
 export type AbilityTrigger = 
@@ -81,38 +82,48 @@ export function triggerAbilities(
 ): void {
   const gameState = context.gameState;
   
+  logAbility('AbilitySystem', 'triggerAbilities', `Triggering abilities for: ${trigger}`, {
+    trigger,
+    contextType: 'attacker' in context ? 'battle' : 'character' in context ? 'movement' : 'game',
+    gamePhase: gameState.getCurrentPhase?.(),
+    currentPlayer: gameState.getCurrentPlayer?.()
+  });
+  
   // For battle contexts with locked-in participants, only process abilities for battling characters
   if ('attacker' in context && 'defender' in context && context.attacker && context.defender) {
     const battleContext = context as BattleContext;
     
-    // For certain triggers that happen after defender is locked in, only process battling characters
-    const lockedInTriggers: AbilityTrigger[] = ['COMPARE_STRENGTHS', 'BATTLE_END'];
+    logAbility('AbilitySystem', 'triggerAbilities', 'Processing battle context abilities', {
+      trigger,
+      attacker: { id: battleContext.attacker.id, name: battleContext.attacker.name },
+      defender: { id: battleContext.defender.id, name: battleContext.defender.name }
+    });
     
-    if (lockedInTriggers.includes(trigger)) {
-      // Process Fellowship character first if applicable (per game rules)
-      const characters = [battleContext.attacker, battleContext.defender].sort((a, b) => {
-        // Fellowship abilities process first
-        if (a.faction === 'Fellowship' && b.faction !== 'Fellowship') return -1;
-        if (b.faction === 'Fellowship' && a.faction !== 'Fellowship') return 1;
-        return 0;
-      });
-      
-      for (const character of characters) {
-        processCharacterAbilities(character, trigger, context);
-      }
-      
-      // Process any combat cards
-      if (battleContext.attackerCard) {
-        processCardAbilities(battleContext.attackerCard, trigger, context);
-      }
-      if (battleContext.defenderCard) {
-        processCardAbilities(battleContext.defenderCard, trigger, context);
-      }
-      return;
+    // For certain triggers that happen after defender is locked in, only process battling characters
+    // Process Fellowship character first if applicable (per game rules)
+    const characters = [battleContext.attacker, battleContext.defender].sort((a, b) => {
+      // Fellowship abilities process first
+      if (a.faction === 'Fellowship' && b.faction !== 'Fellowship') return -1;
+      if (b.faction === 'Fellowship' && a.faction !== 'Fellowship') return 1;
+      return 0;
+    });
+    
+    for (const character of characters) {
+      processCharacterAbilities(character, trigger, context);
     }
+    
+    // Process any combat cards
+    if (battleContext.attackerCard) {
+      processCardAbilities(battleContext.attackerCard, trigger, context);
+    }
+    if (battleContext.defenderCard) {
+      processCardAbilities(battleContext.defenderCard, trigger, context);
+    }
+    // If it's a battle context, we've processed the relevant characters/cards, so return.
+    return;
   }
   
-  // For non-battle contexts or pre-defender-lockdown triggers, process all characters
+  // For non-battle contexts, process all characters
   let allCharacters: any[] = [];
   
   // Try to get all characters, with fallback for different gameState implementations
@@ -161,6 +172,14 @@ function processCharacterAbilities(
   // Get character's abilities from their data
   const abilities = character.getAbilities?.() || [];
   
+  logAbility('AbilitySystem', 'processCharacterAbilities', `Processing abilities for ${character.name}`, {
+    characterId: character.id,
+    characterName: character.name,
+    trigger,
+    abilitiesCount: abilities.length,
+    abilities: abilities
+  });
+  
   for (const abilityId of abilities) {
     // Try the ability ID directly first (for test handlers and specific implementations)
     let handler = abilityHandlers[abilityId];
@@ -169,18 +188,65 @@ function processCharacterAbilities(
     if (!handler) {
       const legacyKey = `${character.name.toUpperCase().replace(/[^A-Z]/g, '_')}_${abilityId.toUpperCase().replace(/[^A-Z]/g, '_')}`;
       handler = abilityHandlers[legacyKey];
+      
+      logTrace('AbilitySystem', 'processCharacterAbilities', `Tried legacy key for ability: ${abilityId}`, {
+        originalKey: abilityId,
+        legacyKey,
+        handlerFound: !!handler
+      });
     }
     
     const shouldTrigger = shouldTriggerAbility(abilityId, trigger, character, context);
     
+    logAbility('AbilitySystem', 'processCharacterAbilities', `Ability evaluation: ${abilityId}`, {
+      characterName: character.name,
+      abilityId,
+      trigger,
+      handlerExists: !!handler,
+      shouldTrigger,
+      contextType: 'character' in context ? 'movement' : 'attacker' in context ? 'battle' : 'game'
+    });
+    
     if (handler && shouldTrigger) {
       try {
+        logAbility('AbilitySystem', 'processCharacterAbilities', `Executing ability: ${abilityId}`, {
+          characterName: character.name,
+          abilityId,
+          trigger
+        });
+        
         handler(character, context);
-        context.gameState.log(`[Ability] ${character.name}: ${abilityId} triggered`);
+        // Only log ability trigger if it's not a CHECK_MOVE_LEGALITY event,
+        // as these abilities primarily add movement options and are not "triggered" in the traditional sense.
+        if (trigger !== 'CHECK_MOVE_LEGALITY') {
+          context.gameState.log(`[Ability] ${character.name}: ${abilityId} triggered`);
+        }
+        
+        logAbility('AbilitySystem', 'processCharacterAbilities', `Ability executed successfully: ${abilityId}`, {
+          characterName: character.name,
+          abilityId
+        });
       } catch (error) {
+        logError('AbilitySystem', 'processCharacterAbilities', `Error triggering ability ${abilityId}`, {
+          characterName: character.name,
+          abilityId,
+          error: error instanceof Error ? error.message : String(error)
+        });
         console.error(`Error triggering ability ${abilityId}:`, error);
         context.gameState.log(`[Error] Failed to trigger ${character.name} ability: ${abilityId}`);
       }
+    } else if (!handler) {
+      logTrace('AbilitySystem', 'processCharacterAbilities', `No handler found for ability: ${abilityId}`, {
+        characterName: character.name,
+        abilityId,
+        trigger
+      });
+    } else if (!shouldTrigger) {
+      logTrace('AbilitySystem', 'processCharacterAbilities', `Ability should not trigger: ${abilityId}`, {
+        characterName: character.name,
+        abilityId,
+        trigger
+      });
     }
   }
 }
@@ -220,6 +286,57 @@ function processCardAbilities(
   }
 }
 
+// Mapping of ability IDs to their default trigger types
+const ABILITY_TRIGGER_MAP: { [key: string]: AbilityTrigger } = {
+  'SAM_SUBSTITUTE': 'PRE_BATTLE_SUBSTITUTE',
+  'FRODO_RETREAT': 'BATTLE_START',
+  'MERRY_VS_WITCHKING': 'BATTLE_START',
+  'PIPPIN_RETREAT': 'BATTLE_START',
+  'GANDALF_REVEAL_CARD': 'BATTLE_START',
+  'ARAGORN_SPECIAL_ATTACK': 'BATTLE_START',
+  'LEGOLAS_VS_FLYING_NAZGUL': 'BATTLE_START',
+  'GIMLI_VS_ORCS': 'BATTLE_START',
+  'WITCHKING_SIDEWAYS_ATTACK': 'MOVE_END',
+  'ORCS_FIRST_STRIKE': 'BATTLE_START',
+  'MAGIC_RESISTANCE': 'RESOLVE_CARDS',
+  'CARD_DRAW': 'RESOLVE_CARDS',
+  'SAM_STRENGTH_BONUS': 'COMPARE_STRENGTHS',
+  'FRODO_STRENGTH_BONUS': 'COMPARE_STRENGTHS',
+  'SHELOB_POST_BATTLE_MOVE': 'BATTLE_END',
+  'WITCHKING_FRODO_RETREAT_OPTION': 'BATTLE_END',
+  'BOROMIR_MUTUAL_DESTRUCTION': 'BATTLE_END',
+  'BALROG_TUNNEL_AMBUSH': 'CHECK_MOVE_LEGALITY',
+  'FLYING_NAZGUL_SPECIAL_MOVE': 'CHECK_MOVE_LEGALITY',
+  'BLACK_RIDER_LONG_CHARGE': 'CHECK_MOVE_LEGALITY',
+  'AMBUSH': 'MOVE_END',
+  'REVEAL_ENEMIES': 'MOVE_END',
+  // Generic abilities that might not have specific character prefixes
+  'SUBSTITUTE': 'PRE_BATTLE_SUBSTITUTE',
+  'RETREAT': 'BATTLE_START',
+  'REVEAL_CARD': 'BATTLE_START',
+  'SPECIAL_ATTACK': 'BATTLE_START',
+  'STRENGTH_BONUS': 'COMPARE_STRENGTHS',
+  'VS_SPECIFIC': 'COMPARE_STRENGTHS',
+  'POST_BATTLE_MOVE': 'BATTLE_END',
+  'RETREAT_OPTION': 'BATTLE_END',
+  'SPECIAL_MOVE': 'CHECK_MOVE_LEGALITY',
+  'TUNNEL_AMBUSH': 'CHECK_MOVE_LEGALITY',
+  'SIDEWAYS_ATTACK': 'CHECK_MOVE_LEGALITY',
+  // Lowercase versions from the old switch statement
+  'frodo_retreat': 'BATTLE_START',
+  'ring_resistance': 'BATTLE_START',
+  'frodo_retreat_block': 'BATTLE_START',
+  'strength_bonus': 'COMPARE_STRENGTHS',
+  'post_battle_move': 'BATTLE_END',
+  'flying_move': 'CHECK_MOVE_LEGALITY',
+  'tunnel_ambush': 'CHECK_MOVE_LEGALITY',
+  'ARAGORN_SPECIAL_ATTACK_MOVE': 'BATTLE_START',
+  'sideways_attack': 'MOVE_END',
+  'sacrifice': 'BATTLE_END', // From shouldTriggerCardAbility
+  'RETRIEVE': 'BATTLE_END', // From shouldTriggerCardAbility
+  'DISCARD_PROTECTION': 'BATTLE_END', // From shouldTriggerCardAbility
+};
+
 /**
  * Determine if a character ability should trigger for the given event
  */
@@ -238,35 +355,24 @@ function shouldTriggerAbility(
     }
   }
   
-  // Fallback to basic trigger timing rules for specific ability IDs
-  switch (trigger) {
-    case 'PRE_BATTLE_SUBSTITUTE':
-      // Only Sam's substitute ability triggers here (before other BATTLE_START abilities)
-      return ['SAM_SUBSTITUTE', 'SUBSTITUTE', 'substitute'].includes(abilityId);
-    
-    case 'BATTLE_START':
-      // Sam's substitute is handled in PRE_BATTLE_SUBSTITUTE, so exclude it here
-      return ['FRODO_RETREAT', 'MERRY_VS_WITCHKING', 'PIPPIN_RETREAT', 'GANDALF_REVEAL_CARD', 'ARAGORN_SPECIAL_ATTACK', 'LEGOLAS_VS_FLYING_NAZGUL', 'GIMLI_VS_ORCS', 'BOROMIR_MUTUAL_DESTRUCTION', 'WITCHKING_SIDEWAYS_ATTACK', 'ORCS_FIRST_STRIKE', 'RETREAT', 'REVEAL_CARD', 'SPECIAL_ATTACK', 'frodo_retreat', 'ring_resistance', 'frodo_retreat_block'].includes(abilityId);
-    
-    case 'RESOLVE_CARDS':
-      return ['MAGIC_RESISTANCE', 'CARD_DRAW'].includes(abilityId);
-    
-    case 'COMPARE_STRENGTHS':
-      return ['SAM_STRENGTH_BONUS', 'FRODO_STRENGTH_BONUS', 'STRENGTH_BONUS', 'VS_SPECIFIC', 'MUTUAL_DESTRUCTION', 'strength_bonus'].includes(abilityId);
-    
-    case 'BATTLE_END':
-      return ['SHELOB_POST_BATTLE_MOVE', 'WITCHKING_FRODO_RETREAT_OPTION', 'POST_BATTLE_MOVE', 'RETREAT_OPTION', 'post_battle_move'].includes(abilityId);
-    
-    case 'CHECK_MOVE_LEGALITY':
-      return ['BALROG_TUNNEL_AMBUSH', 'FLYING_NAZGUL_SPECIAL_MOVE', 'BLACK_RIDER_LONG_CHARGE', 'SPECIAL_MOVE', 'TUNNEL_AMBUSH', 'SIDEWAYS_ATTACK', 'flying_move', 'tunnel_ambush', 'sideways_attack'].includes(abilityId);
-    
-    case 'MOVE_END':
-      return ['AMBUSH', 'REVEAL_ENEMIES'].includes(abilityId);
-    
-    default:
-      return false;
+  // Fallback to the predefined map if trigger is not explicitly defined in ability data
+  const defaultTrigger = ABILITY_TRIGGER_MAP[abilityId];
+  if (defaultTrigger) {
+    return defaultTrigger === trigger;
   }
+
+  // If no explicit trigger in data and no default mapping, it should not trigger.
+  return false;
 }
+
+// Mapping of card ability IDs to their default trigger types
+const CARD_ABILITY_TRIGGER_MAP: { [key: string]: AbilityTrigger } = {
+  'RETRIEVE': 'BATTLE_END',
+  'DISCARD_PROTECTION': 'BATTLE_END',
+  'sacrifice': 'BATTLE_END',
+  // Most card abilities trigger during card resolution if not specified
+  // This is a general fallback, specific card abilities should define their trigger
+};
 
 /**
  * Determine if a card ability should trigger for the given event
@@ -293,17 +399,19 @@ function shouldTriggerCardAbility(
     }
   }
   
-  // Fallback trigger rules
-  switch (trigger) {
-    case 'RESOLVE_CARDS':
-      return true; // Most card abilities trigger during card resolution
-    
-    case 'BATTLE_END':
-      return ['RETRIEVE', 'DISCARD_PROTECTION', 'sacrifice'].includes(abilityId);
-    
-    default:
-      return false;
+  // Fallback to the predefined map if trigger is not explicitly defined in card ability data
+  const defaultTrigger = CARD_ABILITY_TRIGGER_MAP[abilityId];
+  if (defaultTrigger) {
+    return defaultTrigger === trigger;
   }
+
+  // If no explicit trigger in data and no default mapping, it should not trigger.
+  // For RESOLVE_CARDS, if no specific trigger is found, it's a general fallback.
+  if (trigger === 'RESOLVE_CARDS') {
+    return true; // Most card abilities trigger during card resolution
+  }
+  
+  return false;
 }
 
 /**
@@ -707,8 +815,8 @@ function initializeDefaultHandlers(): void {
     const gameState = battleContext.gameState;
     
     // Both characters are defeated immediately
-    source.setDefeated(true);
-    opponent.setDefeated(true);
+    source.setDefeated(true, true); // Explicitly remove from board
+    opponent.setDefeated(true, true); // Explicitly remove from board
     
     gameState.log(`${source.name} and ${opponent.name} are both defeated!`);
     
@@ -876,40 +984,104 @@ function initializeDefaultHandlers(): void {
    * Flying Nazgûl's special move ability - can move to any region with single Fellowship character
    */
   registerAbilityHandler('FLYING_NAZGUL_SPECIAL_MOVE', (source, context) => {
+    logAbility('AbilitySystem', 'FLYING_NAZGUL_SPECIAL_MOVE', 'Flying Nazgul ability triggered', {
+      sourceId: source instanceof CharacterModel ? source.id : 'unknown',
+      sourceName: source instanceof CharacterModel ? source.name : 'unknown',
+      contextCharacterId: 'character' in context ? context.character?.id : 'none',
+      contextCharacterName: 'character' in context ? context.character?.name : 'none'
+    });
+
     if (!(source instanceof CharacterModel) || source.name !== 'Flying Nazgûl') {
+      logAbility('AbilitySystem', 'FLYING_NAZGUL_SPECIAL_MOVE', 'Source validation failed', {
+        isCharacterModel: source instanceof CharacterModel,
+        sourceName: source instanceof CharacterModel ? source.name : typeof source
+      });
       return;
     }
+    
     const movementContext = context as MovementContext;
     // Only add moves if this ability is being checked for the character in question
     if (!movementContext.character || source.id !== movementContext.character.id) {
+      logAbility('AbilitySystem', 'FLYING_NAZGUL_SPECIAL_MOVE', 'Character mismatch - ability not applicable', {
+        sourceId: source.id,
+        contextCharacterId: movementContext.character?.id,
+        characterMatch: movementContext.character ? source.id === movementContext.character.id : false
+      });
       return;
     }
+    
     const gameState = movementContext.gameState;
     const additionalMoves: Array<{ moveType: string; destination: string }> = [];
+    
+    logAbility('AbilitySystem', 'FLYING_NAZGUL_SPECIAL_MOVE', 'Checking all regions for valid flying targets', {
+      characterId: source.id,
+      characterName: source.name,
+      gamePhase: gameState.getCurrentPhase?.(),
+      currentPlayer: gameState.getCurrentPlayer?.()
+    });
+    
     // Check all regions for single Fellowship characters
     const allRegions = gameState.getAllRegions();
     for (const region of allRegions) {
       const fellowshipCharacters = region.getOccupants('Fellowship');
+      
+      logTrace('AbilitySystem', 'FLYING_NAZGUL_SPECIAL_MOVE', `Checking region ${region.name}`, {
+        regionId: region.id,
+        regionName: region.name,
+        fellowshipCharactersCount: fellowshipCharacters.length,
+        fellowshipCharacters: fellowshipCharacters.map(c => ({ id: c.id, name: c.name })),
+        hasSpecial: !!region.special,
+        special: region.special
+      });
+      
       if (fellowshipCharacters.length === 1) {
-        additionalMoves.push({
+        const move = {
           moveType: 'FLYING_MOVE',
           destination: region.id
+        };
+        additionalMoves.push(move);
+        
+        logAbility('AbilitySystem', 'FLYING_NAZGUL_SPECIAL_MOVE', 'Added flying move to region with single Fellowship character', {
+          targetRegionId: region.id,
+          targetRegionName: region.name,
+          targetCharacter: { id: fellowshipCharacters[0].id, name: fellowshipCharacters[0].name },
+          moveType: 'FLYING_MOVE'
         });
       }
+      
       // Also check mountain regions with Fellowship characters for sideways movement
       if (region.special && 
           (region.special === 'Mountains' || 
            (Array.isArray(region.special) && region.special.includes('Mountains'))) &&
           fellowshipCharacters.length > 0) {
-        additionalMoves.push({
+        const move = {
           moveType: 'FLYING_SIDEWAYS',
           destination: region.id
+        };
+        additionalMoves.push(move);
+        
+        logAbility('AbilitySystem', 'FLYING_NAZGUL_SPECIAL_MOVE', 'Added flying sideways move to mountain region', {
+          targetRegionId: region.id,
+          targetRegionName: region.name,
+          fellowshipCharactersCount: fellowshipCharacters.length,
+          moveType: 'FLYING_SIDEWAYS'
         });
       }
     }
+    
     if (additionalMoves.length > 0) {
       movementContext.additionalMoves = additionalMoves;
-      gameState.log(`${source.name} can fly to regions with Fellowship characters`);
+      // Removed gameState.log as it was causing premature "triggering" perception
+      
+      logAbility('AbilitySystem', 'FLYING_NAZGUL_SPECIAL_MOVE', 'Flying Nazgul additional moves added', {
+        totalAdditionalMoves: additionalMoves.length,
+        moves: additionalMoves
+      });
+    } else {
+      logAbility('AbilitySystem', 'FLYING_NAZGUL_SPECIAL_MOVE', 'No additional flying moves available', {
+        allRegionsChecked: allRegions.length,
+        regionsWithSingleFellowship: allRegions.filter(r => r.getOccupants('Fellowship').length === 1).length
+      });
     }
   });
 
@@ -946,7 +1118,7 @@ function initializeDefaultHandlers(): void {
       const forwardRegions = region.sauronAdjacent || [];
       for (const nextRegionId of forwardRegions) {
         const nextRegion = gameState.getRegionById(nextRegionId);
-        if (nextRegion && 
+        if (nextRegion &&
             nextRegion.getOccupants('Sauron').length < nextRegion.getCapacity('Sauron') &&
             !nextRegion.containsEnemy('Sauron')) {
           findForwardTargets(nextRegionId, distance + 1);
@@ -961,7 +1133,7 @@ function initializeDefaultHandlers(): void {
     
     if (additionalMoves.length > 0) {
       movementContext.additionalMoves = additionalMoves;
-      gameState.log(`${source.name} can charge forward to attack Fellowship characters`);
+      // Removed gameState.log as it was causing premature "triggering" perception
     }
   });
 
@@ -1015,6 +1187,32 @@ function initializeDefaultHandlers(): void {
     
     // Skip card play
     battleContext.skipCardPlay = true;
+  });
+
+  /**
+   * Orcs' First Strike ability - defeats enemy before other abilities
+   */
+  registerAbilityHandler('ORCS_FIRST_STRIKE', (source, context) => {
+    if (!(source instanceof CharacterModel) || source.name !== 'Orcs') {
+      return;
+    }
+
+    const battleContext = context as BattleContext;
+    const opponent = source.id === battleContext.attacker?.id ? battleContext.defender : battleContext.attacker;
+
+    if (!opponent) {
+      return;
+    }
+
+    // Orcs defeat the opponent immediately
+    opponent.setDefeated(true, true); // Explicitly remove from board
+
+    battleContext.gameState.log(`${source.name} uses First Strike to defeat ${opponent.name}!`);
+
+    // Set battle outcome
+    battleContext.outcome = 'ATTACKER_WIN'; // Orcs win by defeating opponent
+    battleContext.skipCardPlay = true; // Skip card play phase
+
   });
 
   /**

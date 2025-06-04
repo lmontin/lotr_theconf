@@ -1,5 +1,6 @@
 import { ICharacter, ICharacterVersion, ICharacterAbility, Faction } from '../../types/data'; // Corrected path and added Faction
 import { GameState } from './GameState';
+import { detailedLogger } from '../utils/detailedLogger';
 
 export class CharacterModel implements ICharacter { // Changed class name to CharacterModel to match usage
   public readonly id: string;
@@ -98,23 +99,79 @@ export class CharacterModel implements ICharacter { // Changed class name to Cha
     return this.defeated;
   }
 
-  public setDefeated(defeatedStatus: boolean): void { // Renamed from defeat and takes boolean
+  public setDefeated(defeatedStatus: boolean, removeCharacterFromBoard: boolean = true): void {
+    detailedLogger.debug('BATTLE', 'Character', 'setDefeated',
+      `Setting defeated status for ${this.name} to ${defeatedStatus}`,
+      {
+        characterName: this.name,
+        characterId: this.id,
+        faction: this.faction,
+        currentLocation: this.location,
+        wasDefeated: this.defeated,
+        newDefeatedStatus: defeatedStatus,
+        removeCharacterFromBoard: removeCharacterFromBoard
+      });
+
     if (this.defeated !== defeatedStatus) {
         this.defeated = defeatedStatus;
         if (defeatedStatus) {
             this.is_revealed = true; // Defeated characters are revealed
             this.game.log(`${this.name} has been defeated.`);
-            // Remove from current region if defeated and on board
-            if (this.location) {
-                const currentRegion = this.game.getRegionById(this.location); // MODIFIED: Renamed to getRegionById
-                currentRegion?.removeOccupant(this.id);
-                // Consider if location should be set to null here or by calling setLocation(null)
-                // For now, just removing from occupants. Game logic might explicitly move them.
+
+            detailedLogger.info('BATTLE', 'Character', 'setDefeated',
+              `${this.name} has been defeated and revealed`,
+              {
+                characterName: this.name,
+                characterId: this.id,
+                faction: this.faction,
+                wasRevealed: !this.is_revealed
+              });
+
+            // Remove from current region if defeated and on board, and if explicitly requested
+            if (this.location && removeCharacterFromBoard) {
+                const currentRegionName = this.game.getRegionById(this.location)?.name || 'unknown region';
+                this.game.log(`${this.name} is removed from ${currentRegionName} due to defeat.`);
+
+                detailedLogger.info('BATTLE', 'Character', 'setDefeated',
+                  `Removing defeated character ${this.name} from board`,
+                  {
+                    characterName: this.name,
+                    characterId: this.id,
+                    faction: this.faction,
+                    previousLocation: this.location,
+                    previousRegionName: currentRegionName
+                  });
+
+                // Set location to null to remove character from board
+                this.location = null;
+
+                detailedLogger.info('BATTLE', 'Character', 'setDefeated',
+                  `Character ${this.name} successfully removed from board`,
+                  {
+                    characterName: this.name,
+                    characterId: this.id,
+                    newLocation: this.location
+                  });
+            } else if (this.location && !removeCharacterFromBoard) {
+                detailedLogger.debug('BATTLE', 'Character', 'setDefeated',
+                  `${this.name} was defeated but remains on board as requested`,
+                  { characterName: this.name, characterId: this.id, currentLocation: this.location });
+            } else {
+                detailedLogger.debug('BATTLE', 'Character', 'setDefeated',
+                  `${this.name} was defeated but was not on board`,
+                  { characterName: this.name, characterId: this.id });
             }
         } else {
             // Logic for reviving a character if needed, though less common
             this.game.log(`${this.name} is no longer defeated.`);
+            detailedLogger.info('BATTLE', 'Character', 'setDefeated',
+              `${this.name} is no longer defeated`,
+              { characterName: this.name, characterId: this.id, faction: this.faction });
         }
+    } else {
+        detailedLogger.trace('BATTLE', 'Character', 'setDefeated',
+          `No change needed - ${this.name} defeated status already ${defeatedStatus}`,
+          { characterName: this.name, characterId: this.id, currentStatus: this.defeated });
     }
   }
 

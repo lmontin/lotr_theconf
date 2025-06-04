@@ -35,6 +35,10 @@ import { ICharacter, Faction, MoveType, IRegion } from '../../types/data';
 // Helper to create a game state with some initial setup for testing
 const createRichMockGameState = (): GameState => {
   const gameState = new GameState(mockGameData);
+  
+  // Clear any existing battle state to ensure test isolation
+  gameState.setActiveBattle(null);
+  
   mockGameData.characters.forEach(charData => {
     const charModel = gameState.getCharacterById(charData.id);
     if (charModel) {
@@ -251,6 +255,15 @@ describe('Movement Logic', () => {
   describe('moveCharacter', () => {
     it('should trigger a battle if Frodo moves into a region with Flying Nazgûl', () => {
       const gameState = createRichMockGameState();
+      
+      // Clear any existing battle state
+      gameState.setActiveBattle(null);
+      
+      // Set up Fellowship move phase
+      gameState.nextPhase(); // SETUP -> SAURON_MOVE
+      gameState.nextPhase(); // SAURON_MOVE -> SAURON_ACTION  
+      gameState.nextPhase(); // SAURON_ACTION -> FELLOWSHIP_MOVE
+      
       const frodoId = 'CHAR_FELLOWSHIP_FRODO';
       const nazgulId = 'CHAR_SAURON_FLYING_NAZGUL';
       const highPassId = 'REGION_THE_HIGH_PASS';
@@ -266,18 +279,30 @@ describe('Movement Logic', () => {
       expect(highPassRegion.getOccupants('Fellowship').length).toBe(0);
       expect(canEnterRegion(gameState.getCharacterById(frodoId)!, highPassRegion, gameState)).toBe(true);
 
+      // Verify no battle initially
+      expect(gameState.getActiveBattle()).toBeNull();
+
       gameState.moveCharacter(frodoId, highPassId, { triggerBattle: true });
 
-      const frodo = gameState.getCharacterById(frodoId)!;
-      // After battle, character might be defeated and location might be null
-      // Let's check the battle was triggered first by checking battle history
-      expect(gameState.battleHistory.length).toBeGreaterThan(0);
-      const lastBattle = gameState.battleHistory[gameState.battleHistory.length - 1];
-      expect(lastBattle.attacker).toBe('Frodo');
+      // Check that battle was triggered by checking active battle
+      const activeBattle = gameState.getActiveBattle();
+      expect(activeBattle).not.toBeNull();
+      expect(activeBattle!.regionId).toBe(highPassId);
+      expect(activeBattle!.attackingFaction).toBe('Fellowship');
+      expect(activeBattle!.defendingFaction).toBe('Sauron');
     });
 
     it('should trigger a battle if moving into a region with enemies', () => {
       const gameState = createRichMockGameState();
+      
+      // Clear any existing battle state
+      gameState.setActiveBattle(null);
+      
+      // Set up Fellowship move phase
+      gameState.nextPhase(); // SETUP -> SAURON_MOVE
+      gameState.nextPhase(); // SAURON_MOVE -> SAURON_ACTION  
+      gameState.nextPhase(); // SAURON_ACTION -> FELLOWSHIP_MOVE
+      
       const aragornId = 'CHAR_FELLOWSHIP_ARAGORN';
       const mordorId = 'REGION_MORDOR';
       const aragorn = gameState.getCharacterById(aragornId)!;
@@ -289,13 +314,17 @@ describe('Movement Logic', () => {
       expect(mordorRegion.getOccupants("Sauron" as Faction).length).toBeGreaterThan(0);
       expect(canEnterRegion(aragorn, mordorRegion, gameState)).toBe(true);
 
+      // Verify no battle initially
+      expect(gameState.getActiveBattle()).toBeNull();
+
       gameState.moveCharacter(aragornId, mordorId, { triggerBattle: true });
 
-      // Check that battle was triggered by looking at battle history
-      expect(gameState.battleHistory.length).toBeGreaterThan(0);
-      const lastBattle = gameState.battleHistory[gameState.battleHistory.length - 1];
-      expect(lastBattle.attacker).toBe('Aragorn');
-      // Note: Aragorn might be defeated and location might be null after battle
+      // Check that battle was triggered by checking active battle
+      const activeBattle = gameState.getActiveBattle();
+      expect(activeBattle).not.toBeNull();
+      expect(activeBattle!.regionId).toBe(mordorId);
+      expect(activeBattle!.attackingFaction).toBe('Fellowship');
+      expect(activeBattle!.defendingFaction).toBe('Sauron');
     });
 
     it('should fail to move a defeated character', () => {

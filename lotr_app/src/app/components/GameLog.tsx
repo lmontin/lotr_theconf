@@ -5,6 +5,60 @@ export interface GameLogProps {
   gameState?: any; // Accept gameState for modal display
 }
 
+// Safe JSON serialization that handles circular references
+const safeStringify = (obj: any, maxDepth = 5): string => {
+  const seen = new WeakSet();
+  
+  const replacer = (key: string, value: any, currentDepth = 0): any => {
+    if (currentDepth > maxDepth) {
+      return '[Max Depth Reached]';
+    }
+    
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) {
+        return '[Circular Reference]';
+      }
+      seen.add(value);
+      
+      // Create a simplified version for complex objects
+      if (value.constructor?.name === 'CharacterModel') {
+        return {
+          id: value.id,
+          name: value.name,
+          faction: value.faction,
+          location: value.getLocation?.() || value.location
+        };
+      }
+      
+      if (value.constructor?.name === 'RegionModel') {
+        return {
+          id: value.id,
+          name: value.name,
+          capacity: value.capacity
+        };
+      }
+      
+      if (value.constructor?.name === 'GameState') {
+        return {
+          turn: value.getTurn?.() || value.turn,
+          phase: value.getCurrentPhase?.() || value.phase,
+          player: value.getCurrentPlayer?.() || value.player,
+          gameOver: value.gameOver,
+          winner: value.winner
+        };
+      }
+    }
+    
+    return value;
+  };
+  
+  try {
+    return JSON.stringify(obj, replacer, 2);
+  } catch (error) {
+    return `[Serialization Error: ${error instanceof Error ? error.message : 'Unknown error'}]`;
+  }
+};
+
 const highlightMatch = (text: string, query: string) => {
   if (!query) return text;
   const regex = new RegExp(`(${query})`, "gi");
@@ -51,7 +105,7 @@ const GameLog: React.FC<GameLogProps> = ({ log, gameState }) => {
   // Game state search matches
   const gameStateMatches = modalSearch && gameState
     ? (() => {
-        const gameStateStr = JSON.stringify(gameState, null, 2);
+        const gameStateStr = safeStringify(gameState);
         const lines = gameStateStr.split('\n');
         return lines
           .map((line, idx) => ({ line: line.trim(), lineNumber: idx }))
@@ -266,14 +320,14 @@ const GameLog: React.FC<GameLogProps> = ({ log, gameState }) => {
                   <div className="mb-2">
                     <span className="font-bold">Live Character Status:</span>
                     <pre className="mb-2 bg-gray-100 rounded p-2 overflow-x-auto">
-                      {JSON.stringify(getLiveCharacterStatus(gameState), null, 2)}
+                      {safeStringify(getLiveCharacterStatus(gameState))}
                     </pre>
                   </div>
                 </>
               )}
               {gameState ? (
                 <pre ref={gameStateRef}>
-                  {JSON.stringify(gameState, null, 2)
+                  {safeStringify(gameState)
                     .split('\n')
                     .map((line, idx) => (
                       <span 

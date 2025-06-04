@@ -1,10 +1,11 @@
-import { resolveSimpleBattle, resolveFullBattle } from '../systems/BattleSystem';
+import { resolveSimpleBattle } from '../systems/BattleSystem';
 
 import { ICharacter, IRegion, ICombatCard } from '../../types/data';
 
 import { Player } from './Player';
 import { CharacterModel } from './Character';
 import { RegionModel } from './Region';
+import { logGameState, logBattle, logMovement, logError, logStateSnapshot } from '../utils/detailedLogger';
 
 // --- Lightweight in-memory region/character mapping ---
 type CharacterId = string;
@@ -92,6 +93,7 @@ export class GameState {
   public activeBattle: any | null; // Added for ongoing battle state
   public lastMove: any | null; // Added to store last move data
   public gameOver: boolean; // Added explicit gameOver flag
+  public setupComplete: boolean; // Added to track if setup is finished
 
   public fellowshipPlayer: Player;
   public sauronPlayer: Player;
@@ -109,15 +111,16 @@ export class GameState {
   private regionCharIndex: LightweightRegionCharacterIndex = new LightweightRegionCharacterIndex();
 
   constructor(gameData: { characters: ICharacter[], regions: IRegion[], combatCards: ICombatCard[] }) {
-    this.turn = 1;
+    this.turn = 0; // SETUP is turn 0, not counted as a playable turn
     this.currentPhase = 'SETUP';
-    this.currentPlayer = 'Sauron'; // Sauron goes first
+    this.currentPlayer = 'Sauron'; // Sauron goes first after setup
     this.winner = null;
     this.battleHistory = [];
     this.revealedCharacters = new Set<string>();
     this.activeBattle = null;
     this.lastMove = null;
     this.gameOver = false;
+    this.setupComplete = false; // Initialize setupComplete flag
 
     this.charactersData = gameData.characters;
     this.regionsData = gameData.regions;
@@ -126,13 +129,22 @@ export class GameState {
     this.fellowshipPlayer = new Player('Fellowship', this.combatCardsData.filter(c => c.faction === 'Fellowship' || c.faction === 'Either'));
     this.sauronPlayer = new Player('Sauron', this.combatCardsData.filter(c => c.faction === 'Sauron' || c.faction === 'Either'));
 
+    // Give each player all their cards as starting hand
+    this.fellowshipPlayer.drawCards(this.fellowshipPlayer.deck.length);
+    this.sauronPlayer.drawCards(this.sauronPlayer.deck.length);
+
+    this.log(`Fellowship player starts with ${this.fellowshipPlayer.hand.length} cards`);
+    this.log(`Sauron player starts with ${this.sauronPlayer.hand.length} cards`);
+
     // this.regionStates = new Map(); // MODIFIED
     this.regionModels = new Map<string, RegionModel>(); // MODIFIED
     this.initializeRegions();
     this.characterInstances = new Map();
     this.initializeCharacters(gameData.characters);
 
-    this.log('Game initialized. Turn 1, Phase: SETUP, Player: Sauron');
+    this.log('Game initialized. Setup Phase (Turn 0), Player: Sauron');
+    this.log(`Fellowship player drew ${this.fellowshipPlayer.hand.length} cards`);
+    this.log(`Sauron player drew ${this.sauronPlayer.hand.length} cards`);
   }
 
   private initializeRegions(): void {
@@ -150,9 +162,12 @@ export class GameState {
     });
   }
 
-  // Logging is now handled outside GameState
-  public log(message: string): void {
-    this.gameLog.push(message);
+  // Centralized logging method
+  public log(message: string, options?: { skipPhasePrefix?: boolean }): void {
+    const phasePrefix = options?.skipPhasePrefix
+      ? ''
+      : `[Turn ${this.turn} - ${this.currentPlayer} - ${this.currentPhase}]: `;
+    this.gameLog.push(`${phasePrefix}${message}`);
   }
 
   public logBattle(battleData: any): void {
@@ -229,34 +244,27 @@ export class GameState {
 
   // Placeholder for advancing turn and phase
   public nextTurn(): void {
-    // Alternate player each turn, only one move per turn
-    if (this.currentPlayer === 'Fellowship') {
-      this.currentPlayer = 'Sauron';
-      this.turn++;
-      // When switching to Sauron, set to Sauron move phase
-      if (this.currentPhase === 'SETUP') {
-        this.currentPhase = 'SAURON_MOVE';
-      } else if (this.currentPhase === 'FELLOWSHIP_MOVE') {
-        this.currentPhase = 'SAURON_MOVE';
-      }
-    } else {
-      this.currentPlayer = 'Fellowship';
-      // When switching to Fellowship, set to Fellowship move phase
-      if (this.currentPhase === 'SAURON_MOVE') {
-        this.currentPhase = 'FELLOWSHIP_MOVE';
-      } else if (this.currentPhase === 'SETUP') {
-        this.currentPhase = 'FELLOWSHIP_MOVE';
-      }
-    }
-    this.log(`Turn advanced. Current player: ${this.currentPlayer}. Turn: ${this.turn}. Phase: ${this.currentPhase}`);
+    // This method is deprecated in favor of nextPhase() for proper phase management
+    // For backward compatibility, we'll advance to the next phase
+    this.nextPhase();
   }
 
   // Method to advance to the next phase in the turn sequence
   public nextPhase(): void {
     switch (this.currentPhase) {
       case 'SETUP':
-        this.currentPhase = 'SAURON_MOVE';
-        this.currentPlayer = 'Sauron';
+        // Transitioning from setup to first playable turn
+        // This transition should ideally be triggered by a user action after setup is complete
+        // For now, we'll keep the logic, but the UI should explicitly call nextPhase()
+        // once the user confirms setup is done.
+        if (this.setupComplete) {
+          this.turn = 1; // Now we start turn 1
+          this.currentPhase = 'SAURON_MOVE';
+          this.currentPlayer = 'Sauron';
+          this.log(`Setup complete. Starting Turn 1 - Phase: ${this.currentPhase}, Player: ${this.currentPlayer}`);
+        } else {
+          this.log(`Waiting for user action to advance from SETUP. Current phase: ${this.currentPhase}`);
+        }
         break;
       case 'SAURON_MOVE':
         this.currentPhase = 'SAURON_ACTION';
@@ -338,10 +346,14 @@ export class GameState {
       }
       this.regionCharIndex.addCharacter(characterId, regionId);
       character.setLocation(regionId);
-      this.log(`Placed character ${character.name} in region ${region.name}`);
+      this.log(`Placed character ${character.name} in region ${region.name}`, { skipPhasePrefix: this.currentPhase === 'SETUP' });
+      
+      // Check if setup is complete and advance automatically
+      this.checkAndAdvanceFromSetup();
+      
       return true;
     }
-    this.log(`Failed to place character ${characterId} in region ${regionId}. Character or region not found.`);
+    this.log(`Failed to place character ${characterId} in region ${regionId}. Character or region not found.`, { skipPhasePrefix: this.currentPhase === 'SETUP' });
     return false;
   }
 
@@ -351,76 +363,147 @@ export class GameState {
       isSetup?: boolean, 
       isRetreat?: boolean 
     } = {}): boolean {
+        logGameState('GameState', 'moveCharacter', 'Starting character move in GameState', {
+            characterId,
+            toRegionId,
+            options,
+            currentPhase: this.currentPhase,
+            currentPlayer: this.getCurrentPlayer()
+        });
+
         const character = this.getCharacterById(characterId);
         const toRegion = this.getRegionById(toRegionId);
         if (!character) {
+            logError('GameState', 'moveCharacter', `Character ${characterId} not found`);
             this.log(`Move failed: Character ${characterId} not found.`);
             return false;
         }
         if (!toRegion) {
+            logError('GameState', 'moveCharacter', `Target region ${toRegionId} not found`);
             this.log(`Move failed: Target region ${toRegionId} not found.`);
             return false;
         }
         // Check if character is defeated - defeated characters cannot move
         if (character.defeated) {
+            logError('GameState', 'moveCharacter', `Character ${character.name} is defeated`);
             this.log(`Move failed: Character ${character.name} is defeated and cannot move.`);
             return false;
         }
+        
         const fromRegionId = this.regionCharIndex.regionOf(characterId);
+        
+        logGameState('GameState', 'moveCharacter', 'Character and region validation passed', {
+            characterName: character.name,
+            characterFaction: character.faction,
+            fromRegionId,
+            toRegionId,
+            toRegionName: toRegion.name,
+            currentPhase: this.currentPhase
+        });
+        
         if (fromRegionId) {
             this.regionCharIndex.moveCharacter(characterId, toRegionId);
         } else {
             this.regionCharIndex.addCharacter(characterId, toRegionId);
         }
         character.setLocation(toRegionId);
-        this.log(`Character ${character.name} moved to ${toRegion.name}.`);
+        this.log(`Character ${character.name} moved from ${fromRegionId || 'off the board'} to ${toRegion.name}.`, { skipPhasePrefix: this.currentPhase === 'SETUP' });
 
         // Only trigger battles under specific conditions
+        const isCorrectPhaseForFaction = 
+          (character.faction === 'Fellowship' && this.currentPhase === 'FELLOWSHIP_MOVE') ||
+          (character.faction === 'Sauron' && this.currentPhase === 'SAURON_MOVE');
+          
         const shouldTriggerBattle = 
-          options.triggerBattle === true || // Explicitly requested
-          (!options.isSetup && // Not during setup
+          (options.triggerBattle === true && isCorrectPhaseForFaction) || // Explicitly requested AND correct faction/phase
+          (!options.isSetup && // OR implicit trigger: Not during setup
            !options.isRetreat && // Not during retreat moves
            options.triggerBattle !== false && // Not explicitly disabled
-           (this.currentPhase === 'FELLOWSHIP_MOVE' || this.currentPhase === 'SAURON_MOVE')); // Only during movement phases
+           isCorrectPhaseForFaction); // Only during correct phase for this faction
+
+        logBattle('GameState', 'moveCharacter', 'Battle triggering logic evaluation', {
+            characterName: character.name,
+            characterFaction: character.faction,
+            currentPhase: this.currentPhase,
+            isCorrectPhaseForFaction,
+            shouldTriggerBattle,
+            triggerBattleOption: options.triggerBattle,
+            isSetup: options.isSetup,
+            isRetreat: options.isRetreat,
+            battleTriggerExplicitlyDisabled: options.triggerBattle === false
+        });
 
         if (shouldTriggerBattle) {
-            // Simple battle trigger: if after moving, there is an enemy in the region, resolve a simple battle
+            // Set up battle state instead of immediately resolving it
             const occupants = toRegion.getOccupants();
             const enemies = occupants.filter(c => c.faction !== character.faction && !c.defeated);
+            
+            logBattle('GameState', 'moveCharacter', 'Checking for enemies in destination region', {
+                regionName: toRegion.name,
+                regionId: toRegionId,
+                totalOccupants: occupants.length,
+                occupantDetails: occupants.map(c => ({ id: c.id, name: c.name, faction: c.faction, defeated: c.defeated })),
+                enemiesFound: enemies.length,
+                enemyDetails: enemies.map(c => ({ id: c.id, name: c.name, faction: c.faction }))
+            });
+            
             if (enemies.length > 0) {
-                // For now, just battle the first enemy found
-                const defender = enemies[0];
-                this.log(`Battle triggered: ${character.name} vs ${defender.name}`);
-                // Use the new 4-step battle system
-                const result = resolveFullBattle(character, defender, this);
-                // Mark loser as defeated
-                if (result.outcome !== 'MUTUAL_DEFEAT' && result.outcome) {
-                    if (result.outcome === 'ATTACKER_WIN') {
-                        defender.setDefeated?.(true);
-                        this.setCharacterLocation(defender.id, null);
-                    } else if (result.outcome === 'DEFENDER_WIN') {
-                        character.setDefeated?.(true);
-                        this.setCharacterLocation(character.id, null);
-                    }
-                } else if (result.outcome === 'MUTUAL_DEFEAT') {
-                    character.setDefeated?.(true);
-                    defender.setDefeated?.(true);
-                    this.setCharacterLocation(character.id, null);
-                    this.setCharacterLocation(defender.id, null);
-                }
-                // Optionally, log the battle result in battleHistory
-                this.logBattle({
-                    attacker: character.name,
-                    defender: defender.name,
-                    winner: result.outcome === 'ATTACKER_WIN' ? character.name : result.outcome === 'DEFENDER_WIN' ? defender.name : null,
-                    loser: result.outcome === 'ATTACKER_WIN' ? defender.name : result.outcome === 'DEFENDER_WIN' ? character.name : null,
-                    tie: result.outcome === 'MUTUAL_DEFEAT',
-                    log: result.log ? result.log.join('\n') : '',
-                    turn: this.turn,
-                    phase: this.currentPhase
+                this.log(`Battle triggered in ${toRegion.name} involving ${character.name}.`);
+                const attackersInRegion = toRegion.getOccupants(character.faction);
+                const defendingFaction = character.faction === ("Fellowship" as Faction) ? ("Sauron" as Faction) : ("Fellowship" as Faction);
+                const defendersInRegion = toRegion.getOccupants(defendingFaction);
+
+                logBattle('GameState', 'moveCharacter', 'Setting up battle state', {
+                    regionId: toRegionId,
+                    regionName: toRegion.name,
+                    triggeringCharacterId: character.id,
+                    triggeringCharacterName: character.name,
+                    attackingFaction: character.faction,
+                    defendingFaction,
+                    attackersCount: attackersInRegion.length,
+                    attackers: attackersInRegion.map(c => ({ id: c.id, name: c.name })),
+                    defendersCount: defendersInRegion.length,
+                    defenders: defendersInRegion.map(c => ({ id: c.id, name: c.name }))
+                });
+
+                // Create battle object with safe references (no circular refs)
+                const battleData = {
+                    regionId: toRegionId,
+                    regionName: toRegion.name,
+                    triggeringCharacterId: character.id,
+                    attackingFaction: character.faction,
+                    attackers: attackersInRegion, // Keep full objects for game logic
+                    defendingFaction: defendingFaction,
+                    defenders: defendersInRegion, // Keep full objects for game logic
+                };
+                
+                this.setActiveBattle(battleData);
+                
+                logBattle('GameState', 'moveCharacter', 'Battle state created successfully', {
+                    regionId: toRegionId,
+                    regionName: toRegion.name,
+                    attackersCount: attackersInRegion.length,
+                    defendersCount: defendersInRegion.length
+                });
+            } else {
+                logBattle('GameState', 'moveCharacter', 'No enemies found - battle not triggered', {
+                    regionName: toRegion.name,
+                    occupantsCount: occupants.length
                 });
             }
+        } else {
+            logBattle('GameState', 'moveCharacter', 'Battle not triggered due to conditions', {
+                shouldTriggerBattle: false,
+                reason: !isCorrectPhaseForFaction ? 'Wrong phase for faction' : 'Other condition failed'
+            });
         }
+        
+        logGameState('GameState', 'moveCharacter', 'Move completed successfully', {
+            characterName: character.name,
+            finalLocation: character.getLocation(),
+            activeBattleAfterMove: this.getActiveBattle()
+        });
+        
         return true;
     }
   // --- New region/character view helpers ---
@@ -433,13 +516,13 @@ export class GameState {
   }
 
   public randomlyPlaceFactionCharacters(faction: Faction): void {
-    this.log(`Attempting to randomly place characters for ${faction}.`);
+    this.log(`Attempting to randomly place characters for ${faction}.`, { skipPhasePrefix: true });
     const unplacedCharacters = Array.from(this.characterInstances.values()).filter(
       char => char.faction === faction && !char.getLocation()
     );
 
     if (unplacedCharacters.length === 0) {
-      this.log(`No unplaced characters for ${faction} to place.`);
+      this.log(`No unplaced characters for ${faction} to place.`, { skipPhasePrefix: true });
       return;
     }
 
@@ -449,12 +532,12 @@ export class GameState {
     });
 
     if (factionStartingRegions.length === 0) {
-      this.log(`No starting regions found for ${faction}. Cannot place characters.`);
+      this.log(`No starting regions found for ${faction}. Cannot place characters.`, { skipPhasePrefix: true });
       return;
     }
 
-    this.log(`Found ${unplacedCharacters.length} unplaced characters for ${faction}.`);
-    this.log(`Found ${factionStartingRegions.length} potential starting regions for ${faction}.`);
+    this.log(`Found ${unplacedCharacters.length} unplaced characters for ${faction}.`, { skipPhasePrefix: true });
+    this.log(`Found ${factionStartingRegions.length} potential starting regions for ${faction}.`, { skipPhasePrefix: true });
 
     for (const character of unplacedCharacters) {
       // Filter regions that still have capacity for this faction
@@ -465,7 +548,7 @@ export class GameState {
       });
 
       if (availableRegions.length === 0) {
-        this.log(`No available starting regions with capacity for ${character.name} (${faction}). Skipping placement.`);
+        this.log(`No available starting regions with capacity for ${character.name} (${faction}). Skipping placement.`, { skipPhasePrefix: true });
         continue; // Skip this character if no suitable region is found
       }
 
@@ -476,7 +559,22 @@ export class GameState {
       this.placeCharacter(character.id, selectedRegion.id);
       // placeCharacter already logs the placement
     }
-    this.log(`Finished random placement for ${faction}.`);
+    this.log(`Finished random placement for ${faction}.`, { skipPhasePrefix: true });
+  }
+
+  // Check if setup is complete (all characters have been placed)
+  public isSetupComplete(): boolean {
+    const allCharacters = Array.from(this.characterInstances.values());
+    const unplacedCharacters = allCharacters.filter(char => !char.getLocation());
+    return unplacedCharacters.length === 0;
+  }
+
+  // Automatically advance from setup to Turn 1 if setup is complete
+  public checkAndAdvanceFromSetup(): void {
+    if (this.currentPhase === 'SETUP' && this.isSetupComplete()) {
+      this.log('Setup complete! All characters have been placed. Ready to advance to Turn 1.');
+      this.setupComplete = true; // Set flag, but don't automatically advance phase
+    }
   }
 
 

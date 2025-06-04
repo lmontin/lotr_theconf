@@ -3,6 +3,7 @@ import { CharacterModel as Character } from '../models/Character';
 import { RegionModel as Region } from '../models/Region';
 import { Faction, MoveType, IMoveOption, IMoveLogEntry, GamePhase } from '../../types/data';
 import { triggerAbilities, MovementContext } from '../systems/AbilitySystem';
+import { logMovement, logAbility, logTrace, logError } from '../utils/detailedLogger';
 
 export interface LegalMove {
   type: MoveType;
@@ -22,16 +23,33 @@ export function canEnterRegion(character: Character, destinationRegionModel: Reg
   const factionOccupantsCount = destinationRegionModel.getOccupants(charFaction).length;
   const hasEnemies = destinationRegionModel.containsEnemy(charFaction);
 
-  // console.log(`[canEnterRegion] Checking for ${character.name} into ${destinationRegionModel.name} (${destinationRegionModel.id}):`);
-  // console.log(`  Char Faction: ${charFaction}, Region Capacity for Faction: ${regionCapacityForFaction}, Faction Occupants: ${factionOccupantsCount}, Has Enemies: ${hasEnemies}`);
+  logTrace('movement', 'canEnterRegion', `Checking entry for ${character.name} into ${destinationRegionModel.name}`, {
+    characterId: character.id,
+    characterName: character.name,
+    characterFaction: charFaction,
+    regionId: destinationRegionModel.id,
+    regionName: destinationRegionModel.name,
+    regionCapacityForFaction,
+    factionOccupantsCount,
+    hasEnemies,
+    regionOccupants: destinationRegionModel.getOccupants().map(c => ({ id: c.id, name: c.name, faction: c.faction }))
+  });
 
   if (regionCapacityForFaction > 0) {
     const canEnter = factionOccupantsCount < regionCapacityForFaction;
-    // console.log(`  Region has capacity. Can enter? ${canEnter}`);
+    logTrace('movement', 'canEnterRegion', `Region has capacity. Can enter: ${canEnter}`, {
+      hasCapacity: true,
+      canEnter
+    });
     return canEnter;
   } else {
     const canEnter = hasEnemies || factionOccupantsCount === 0;
-    // console.log(`  Region has 0 capacity for faction. Can enter (enemies or empty)? ${canEnter}`);
+    logTrace('movement', 'canEnterRegion', `Region has 0 capacity for faction. Can enter (enemies or empty): ${canEnter}`, {
+      hasCapacity: false,
+      hasEnemies,
+      factionOccupantsCount,
+      canEnter
+    });
     return canEnter;
   }
 }
@@ -47,17 +65,27 @@ export function getLegalMoves(character: Character, gameState: GameState, contex
   const moves: LegalMove[] = [];
   const characterLocation = character.getLocation();
 
-  console.log(`[getLegalMoves] Character: ${character.name} (${character.id}), Faction: ${character.faction}, Location: ${characterLocation}`);
+  logMovement('movement', 'getLegalMoves', `Calculating legal moves for ${character.name}`, {
+    characterId: character.id,
+    characterName: character.name,
+    faction: character.faction,
+    currentLocation: characterLocation,
+    defeated: character.defeated,
+    gamePhase: gameState.getCurrentPhase(),
+    currentPlayer: gameState.getCurrentPlayer()
+  });
 
   if (!characterLocation || character.defeated) {
-    console.log('[getLegalMoves] No location or character defeated. Returning empty moves.');
+    logMovement('movement', 'getLegalMoves', `No moves available - character not placed or defeated`, {
+      hasLocation: !!characterLocation,
+      defeated: character.defeated
+    });
     return moves;
   }
 
   const currentRegionModel = gameState.getRegionById(characterLocation);
   if (!currentRegionModel) {
     gameState.log(`Error: Current region for ${character.name} (${character.id}) not found.`);
-    console.log(`[getLegalMoves] Current region not found for ${character.name}. Returning empty moves.`);
     return moves;
   }
 
@@ -72,14 +100,11 @@ export function getLegalMoves(character: Character, gameState: GameState, contex
 
   // 1. Regular forward movement
   const forwardRegionIds = character.faction === ("Fellowship" as Faction) ? currentRegionModel.fellowshipAdjacent : currentRegionModel.sauronAdjacent;
-  console.log(`[getLegalMoves] Forward region IDs for ${character.name}:`, forwardRegionIds);
   if (forwardRegionIds) {
     for (const destId of forwardRegionIds) {
       const destRegionModel = gameState.getRegionById(destId);
-      console.log(`[getLegalMoves] Checking forward move to ${destId}:`, destRegionModel ? 'Region found' : 'Region not found');
       if (destRegionModel) {
         const canEnter = canEnterRegion(character, destRegionModel, gameState);
-        console.log(`[getLegalMoves] Can enter ${destId}?`, canEnter);
         if (canEnter) {
           moves.push({ type: 'FORWARD' as MoveType, destinationRegionId: destId });
         }
@@ -92,7 +117,6 @@ export function getLegalMoves(character: Character, gameState: GameState, contex
     if (currentRegionModel.fellowshipSpecialMovement) {
       for (const specialDestId of currentRegionModel.fellowshipSpecialMovement) {
         const specialDestRegionModel = gameState.getRegionById(specialDestId);
-        console.log(`[getLegalMoves] Checking special move to ${specialDestId}:`, specialDestRegionModel ? 'Region found' : 'Region not found');
         if (specialDestRegionModel && canEnterRegion(character, specialDestRegionModel, gameState)) {
           const currentSpecial = currentRegionModel.special;
           const destSpecial = specialDestRegionModel.special;
@@ -123,27 +147,54 @@ export function getLegalMoves(character: Character, gameState: GameState, contex
     moveType: move.type,
     destination: move.destinationRegionId
   }));
-  console.log(`[getLegalMoves] Moves before abilities:`, moves);
 
   // 4. Trigger abilities that might add additional moves
+  logAbility('movement', 'getLegalMoves', 'Triggering CHECK_MOVE_LEGALITY abilities', {
+    characterId: character.id,
+    characterName: character.name,
+    availableMovesCount: movementContext.availableMoves.length,
+    availableMoves: movementContext.availableMoves
+  });
+  
   triggerAbilities('CHECK_MOVE_LEGALITY', movementContext);
-  console.log(`[getLegalMoves] movementContext.additionalMoves after abilities:`, movementContext.additionalMoves);
 
   // 5. Add any additional moves granted by abilities
   if (movementContext.additionalMoves && movementContext.additionalMoves.length > 0) {
+    logAbility('movement', 'getLegalMoves', 'Processing additional moves from abilities', {
+      additionalMovesCount: movementContext.additionalMoves.length,
+      additionalMoves: movementContext.additionalMoves
+    });
+    
     for (const additionalMove of movementContext.additionalMoves) {
       const destRegionModel = gameState.getRegionById(additionalMove.destination);
-      console.log(`[getLegalMoves] Ability additional move to ${additionalMove.destination}:`, destRegionModel ? 'Region found' : 'Region not found');
       if (destRegionModel && canEnterRegion(character, destRegionModel, gameState)) {
-        moves.push({ 
+        const newMove = { 
           type: additionalMove.moveType as MoveType, 
           destinationRegionId: additionalMove.destination 
+        };
+        moves.push(newMove);
+        
+        logAbility('movement', 'getLegalMoves', 'Added ability-granted move', {
+          moveType: additionalMove.moveType,
+          destination: additionalMove.destination,
+          destinationName: destRegionModel.name
+        });
+      } else {
+        logAbility('movement', 'getLegalMoves', 'Rejected ability-granted move - cannot enter region', {
+          moveType: additionalMove.moveType,
+          destination: additionalMove.destination,
+          regionFound: !!destRegionModel,
+          canEnter: destRegionModel ? canEnterRegion(character, destRegionModel, gameState) : false
         });
       }
     }
   }
 
-  console.log(`[getLegalMoves] Final moves for ${character.name}:`, moves);
+  logMovement('movement', 'getLegalMoves', `Final legal moves for ${character.name}`, {
+    totalMoves: moves.length,
+    moves: moves.map(m => ({ type: m.type, destination: m.destinationRegionId }))
+  });
+
   return moves;
 }
 
@@ -161,29 +212,54 @@ export function moveCharacter(
   gameState: GameState,
   moveType: MoveType
 ): boolean {
+  logMovement('movement', 'moveCharacter', 'Starting character move', {
+    characterId,
+    destinationRegionId,
+    moveType,
+    gamePhase: gameState.getCurrentPhase(),
+    currentPlayer: gameState.getCurrentPlayer()
+  });
+
   const characterModel = gameState.getCharacterById(characterId);
   if (!characterModel) {
+    logError('movement', 'moveCharacter', `Character ${characterId} not found`);
     gameState.log(`MOVE FAIL: Character ${characterId} not found.`);
     return false;
   }
   if (characterModel.defeated) {
+    logError('movement', 'moveCharacter', `Character ${characterModel.name} is defeated`);
     gameState.log(`MOVE FAIL: ${characterModel.name} is defeated.`);
     return false;
   }
 
   const destinationRegionModel = gameState.getRegionById(destinationRegionId);
   if (!destinationRegionModel) {
+    logError('movement', 'moveCharacter', `Destination region ${destinationRegionId} not found`);
     gameState.log(`MOVE FAIL: ${characterModel.name} to ${destinationRegionId} - Destination region not found.`);
     return false;
   }
 
   if (!canEnterRegion(characterModel, destinationRegionModel, gameState)) {
+    logError('movement', 'moveCharacter', `Character cannot enter destination region`, {
+      characterName: characterModel.name,
+      regionName: destinationRegionModel.name,
+      regionId: destinationRegionId
+    });
     gameState.log(`MOVE FAIL: ${characterModel.name} cannot enter ${destinationRegionModel.name} (e.g., capacity full, or 0 capacity and no enemies/not empty).`);
     return false;
   }
 
   const oldRegionId = characterModel.getLocation();
   const oldRegionName = oldRegionId ? gameState.getRegionById(oldRegionId)?.name : 'off-board';
+
+  logMovement('movement', 'moveCharacter', 'Move validation passed, executing move', {
+    characterName: characterModel.name,
+    fromRegion: oldRegionId,
+    fromRegionName: oldRegionName,
+    toRegion: destinationRegionId,
+    toRegionName: destinationRegionModel.name,
+    moveType
+  });
 
   // Create movement context for ability system
   const movementContext: MovementContext = {
@@ -195,10 +271,38 @@ export function moveCharacter(
   };
 
   // Trigger pre-move abilities
+  logAbility('movement', 'moveCharacter', 'Triggering MOVE_START abilities', {
+    characterName: characterModel.name,
+    fromRegion: oldRegionId,
+    toRegion: destinationRegionId,
+    moveType
+  });
   triggerAbilities('MOVE_START', movementContext);
 
   // Execute the move
-  characterModel.setLocation(destinationRegionId);
+  // Update both the character location and GameState's region tracking
+  if (oldRegionId) {
+    logMovement('movement', 'moveCharacter', 'Executing move via GameState.moveCharacter (with battle trigger)', {
+      characterName: characterModel.name,
+      fromRegion: oldRegionId,
+      toRegion: destinationRegionId,
+      triggerBattle: true
+    });
+    
+    // Use GameState's moveCharacter method to properly update region tracking AND handle battles
+    gameState.moveCharacter(characterModel.id, destinationRegionId, { 
+      triggerBattle: true, // Let GameState handle battle triggering with proper phase checks
+      isSetup: false, 
+      isRetreat: false 
+    });
+  } else {
+    logMovement('movement', 'moveCharacter', 'Placing character from off-board', {
+      characterName: characterModel.name,
+      toRegion: destinationRegionId
+    });
+    // Character is being placed from off-board
+    gameState.placeCharacter(characterModel.id, destinationRegionId);
+  }
 
   const moveLogEntry: IMoveLogEntry = {
     characterId: characterModel.id,
@@ -215,26 +319,22 @@ export function moveCharacter(
   gameState.log(`MOVE ACTION: ${characterModel.name} (${characterModel.faction}) ${moveType} from ${oldRegionName} to ${destinationRegionModel.name}.`);
 
   // Trigger post-move abilities
+  logAbility('movement', 'moveCharacter', 'Triggering MOVE_END abilities', {
+    characterName: characterModel.name,
+    fromRegion: oldRegionId,
+    toRegion: destinationRegionId,
+    moveType
+  });
   triggerAbilities('MOVE_END', movementContext);
 
-  // Check for battle initiation
-  if (destinationRegionModel.containsEnemy(characterModel.faction)) {
-    gameState.log(`Battle triggered in ${destinationRegionModel.name} involving ${characterModel.name}.`);
-    const attackersInRegion = destinationRegionModel.getOccupants(characterModel.faction).map(c => c);
-    const defendingFaction = characterModel.faction === ("Fellowship" as Faction) ? ("Sauron" as Faction) : ("Fellowship" as Faction);
-    const defendersInRegion = destinationRegionModel.getOccupants(defendingFaction).map(c => c);
+  logMovement('movement', 'moveCharacter', 'Move completed successfully', {
+    characterName: characterModel.name,
+    finalLocation: characterModel.getLocation(),
+    activeBattle: gameState.getActiveBattle(),
+    activeBattleExists: !!gameState.getActiveBattle(),
+    moveLogEntry
+  });
 
-    gameState.setActiveBattle({
-        regionId: destinationRegionId,
-        regionName: destinationRegionModel.name,
-        triggeringCharacterId: characterModel.id,
-        attackingFaction: characterModel.faction,
-        attackers: attackersInRegion,
-        defendingFaction: defendingFaction,
-        defenders: defendersInRegion,
-    });
-  }
-  
   return true;
 }
 
