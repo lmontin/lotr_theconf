@@ -1,7 +1,7 @@
-import { Player } from '../models/Player';
-import { GameState } from '../models/GameState';
-import { checkHandReclaimAfterCardPlay } from './BattleSystem';
-import { ICombatCard } from '../../types/data';
+import { Player } from '@/lib/models/Player';
+import { GameState } from '@/lib/models/GameState';
+import { checkHandReclaimAfterCardPlay } from '@/lib/systems/BattleSystem';
+import { ICombatCard } from '@/types/data';
 
 describe('BattleSystem hand reclaim after card play', () => {
   function makeCards(n: number, prefix: string): ICombatCard[] {

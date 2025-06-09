@@ -65,19 +65,21 @@ export class RegionModel implements IRegion {
     return this.getOccupants().some(char => char.faction !== friendlyFaction);
   }
 
-  public getOccupants(faction?: Faction): CharacterModel[] {
-    const charIds = Array.from(this.game.charactersIn(this.id));
-    const allChars = charIds.map(id => this.game.getCharacterById(id)).filter(Boolean) as CharacterModel[];
-    if (!faction) return allChars;
-    return allChars.filter(char => char.faction === faction);
-  }
-
   // Helper method to check if region contains a character by ID
 
 
 
   public getCapacity(faction: Faction): number {
-    return this.factionCapacity || 0;
+    if (faction === 'Fellowship' && this.capacity.Fellowship !== undefined) {
+      return this.capacity.Fellowship;
+    }
+    if (faction === 'Sauron' && this.capacity.Sauron !== undefined) {
+      return this.capacity.Sauron;
+    }
+    // Fallback to total capacity if specific faction capacity is not defined,
+    // or a more generic capacity if that's intended.
+    // For now, returning total or 0 if total is also undefined.
+    return this.capacity.total || 0;
   }
 
 

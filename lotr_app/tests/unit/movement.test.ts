@@ -25,12 +25,12 @@ describe('Fellowship Special Forward Movement', () => {
     }
   });
 });
-import { GameState } from '../models/GameState';
-import { CharacterModel } from '../models/Character';
-import { RegionModel } from '../models/Region';
-import { mockGameData } from '../models/mockGameData';
-import { getLegalMoves, canEnterRegion } from './movement';
-import { ICharacter, Faction, MoveType, IRegion } from '../../types/data';
+import { GameState } from '@/lib/models/GameState';
+import { CharacterModel } from '@/lib/models/Character';
+import { RegionModel, RegionName } from '@/lib/models/Region';
+import { mockGameData } from '@/lib/models/mockGameData';
+import { getLegalMoves, moveCharacter, MoveType, Path, canEnterRegion } from '@/lib/gameLogic/movement';
+import { ICharacter, Faction, /*MoveType,*/ IRegion } from '@/types/data';
 
 // Helper to create a game state with some initial setup for testing
 const createRichMockGameState = (): GameState => {

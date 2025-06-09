@@ -1,6 +1,6 @@
-import { Player } from '../models/Player';
-import { chooseCard, getAvailableCards } from './BattleSystem';
-import { ICombatCard } from '../../types/data';
+import { Player } from '@/lib/models/Player';
+import { chooseCard, getAvailableCards } from '@/lib/systems/BattleSystem';
+import { ICombatCard } from '@/types/data';
 
 describe('BattleSystem Card Selection', () => {
   const mockHand: ICombatCard[] = [

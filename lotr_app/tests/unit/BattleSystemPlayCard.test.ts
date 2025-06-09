@@ -1,6 +1,6 @@
-import { Player } from '../models/Player';
-import { playBattleCard } from './BattleSystem';
-import { ICombatCard } from '../../types/data';
+import { Player } from '@/lib/models/Player';
+import { playBattleCard } from '@/lib/systems/BattleSystem';
+import { ICombatCard } from '@/types/data';
 
 describe('BattleSystem playBattleCard', () => {
   const card: ICombatCard = { id: 'CARD_FELLOWSHIP_STRENGTH_2', name: '2', faction: 'Fellowship', cardType: 'strength', strength: 2, abilities: [], resolutionOrder: 5 };

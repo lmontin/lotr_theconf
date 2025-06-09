@@ -1,7 +1,7 @@
-import { RegionModel as Region } from './Region';
-import { CharacterModel as Character } from './Character';
-import { GameState } from './GameState';
-import { IRegion as IRegionData, ICharacter as ICharacterData, ICombatCard } from '../../types/data';
+import { RegionModel as Region } from '@/lib/models/Region';
+import { CharacterModel as Character } from '@/lib/models/Character';
+import { GameState } from '@/lib/models/GameState';
+import { IRegion as IRegionData, ICharacter as ICharacterData, ICombatCard } from '@/types/data';
 
 const mockShireData: IRegionData = {
   id: 'shire',
@@ -76,57 +76,58 @@ describe('Region', () => {
   });
 
   it('should add a character to the region', () => {
-    shire.addCharacter(frodo);
+    mockGameState.placeCharacter(frodo.id, shire.id);
     expect(shire.getOccupants().length).toBe(1);
-    expect(shire.getOccupants()).toContain(frodo);
-    // The Character's location is set by Character.setLocation, which is called by GameState or movement logic.
-    // Region.addCharacter itself doesn't set Character.location in the current model.
-    // However, if it were to, this is where you'd test it:
-    // expect(frodo.location).toBe(shire.id); // This depends on Character.setLocation being called by Region.addCharacter
+    expect(shire.getOccupants().map(c => c.id)).toContain(frodo.id);
   });
 
-  it('should not add a character if already present', () => {
-    shire.addCharacter(frodo);
-    shire.addCharacter(frodo); 
+  it('should not add a character if already present in GameState index', () => {
+    mockGameState.placeCharacter(frodo.id, shire.id);
+    // Attempting to place again in the same region via GameState might have different behavior
+    // depending on GameState.placeCharacter implementation (e.g., throw error, be a no-op, or allow duplicates if not handled)
+    // For this test, we assume GameState.placeCharacter handles or ignores re-placement.
+    // If it throws, the test would fail here, which is also informative.
+    mockGameState.placeCharacter(frodo.id, shire.id);
     expect(shire.getOccupants().length).toBe(1);
   });
 
-  it('should remove a character from the region', () => {
-    shire.addCharacter(frodo);
-    // To test character.location update, ensure it was set first (e.g. by a mock GameState.moveCharacter)
-    // frodo.setLocation(shire.id); // Simulate character being placed
-    shire.removeCharacter(frodo);
+  it('should remove a character from the region via GameState', () => {
+    mockGameState.placeCharacter(frodo.id, shire.id);
+    expect(shire.getOccupants().length).toBe(1);
+    mockGameState.setCharacterLocation(frodo.id, null); // Simulate character removal or move
     expect(shire.getOccupants().length).toBe(0);
-    // expect(frodo.location).toBeNull(); // This depends on Character.setLocation(null) being called by Region.removeCharacter
   });
 
-  it('should not fail when removing a character not present', () => {
-    shire.removeCharacter(frodo); 
+  it('should not fail when removing a character not present (from GameState perspective)', () => {
+    // Initially, Frodo is not in the Shire in mockGameState's index
+    mockGameState.setCharacterLocation(frodo.id, null); // Ensure Frodo is not in any region
     expect(shire.getOccupants().length).toBe(0);
   });
 
   it('should get characters by faction using getOccupants(faction)', () => {
-    shire.addCharacter(frodo);    // Fellowship
-    shire.addCharacter(sam);      // Fellowship
-    shire.addCharacter(witchKing); // Sauron
+    mockGameState.placeCharacter(frodo.id, shire.id);    // Fellowship
+    mockGameState.placeCharacter(sam.id, shire.id);      // Fellowship
+    mockGameState.placeCharacter(witchKing.id, shire.id); // Sauron
 
     const fellowshipChars = shire.getOccupants('Fellowship');
     expect(fellowshipChars.length).toBe(2);
-    expect(fellowshipChars).toContain(frodo);
-    expect(fellowshipChars).toContain(sam);
+    expect(fellowshipChars.map(c => c.id)).toContain(frodo.id);
+    expect(fellowshipChars.map(c => c.id)).toContain(sam.id);
 
     const sauronChars = shire.getOccupants('Sauron');
     expect(sauronChars.length).toBe(1);
-    expect(sauronChars).toContain(witchKing);
+    expect(sauronChars.map(c => c.id)).toContain(witchKing.id);
   });
 
   it('should check if it contains an enemy', () => {
-    shire.addCharacter(frodo); 
+    mockGameState.placeCharacter(frodo.id, shire.id);
     expect(shire.containsEnemy('Fellowship')).toBe(false); 
     expect(shire.containsEnemy('Sauron')).toBe(true);   
 
-    shire.addCharacter(witchKing); 
+    mockGameState.placeCharacter(witchKing.id, shire.id);
     expect(shire.containsEnemy('Fellowship')).toBe(true);  
+    // Now both Frodo (Fellowship) and WitchKing (Sauron) are in the Shire
+    // So, for Sauron, Fellowship is an enemy.
     expect(shire.containsEnemy('Sauron')).toBe(true);    
   });
 
@@ -134,33 +135,35 @@ describe('Region', () => {
     expect(shire.containsEnemy('Fellowship')).toBe(false);
     expect(shire.containsEnemy('Sauron')).toBe(false);
 
-    shire.addCharacter(frodo);
+    mockGameState.placeCharacter(frodo.id, shire.id);
     expect(shire.containsEnemy('Fellowship')).toBe(false);
 
-    const anotherRegion = new Region(mockMordorData, mockGameState);
-    anotherRegion.addCharacter(witchKing);
-    expect(anotherRegion.containsEnemy('Sauron')).toBe(false);
+    // Create a new GameState and Region for this specific sub-test to ensure isolation
+    const freshGameState = new GameState({ characters: [mockWitchKingCharData], regions: [mockMordorData], combatCards: [] });
+    const freshMordor = new Region(mockMordorData, freshGameState);
+    freshGameState.placeCharacter(witchKing.id, freshMordor.id);
+    expect(freshMordor.containsEnemy('Sauron')).toBe(false);
   });
 
   it('should get current capacity for a faction', () => {
-    expect(shire.getCapacity('Fellowship')).toBe(4); // Updated to match actual capacity
-    expect(shire.getCapacity('Sauron')).toBe(1); // Updated to match mockShireData.startingCapacitySauron
+    expect(shire.getCapacity('Fellowship')).toBe(mockShireData.startingCapacityFellowship);
+    expect(shire.getCapacity('Sauron')).toBe(mockShireData.startingCapacitySauron);
   });
 
   it('isAtCapacity should correctly report based on factionCapacity', () => {
     expect(shire.isAtCapacity('Fellowship')).toBe(false);
-    shire.addCharacter(new Character({ id: 'f1', name:'F1', faction: 'Fellowship', versions: {classic: {id:'f1c', name:'F1', strength:1}}}, mockGameState));
-    shire.addCharacter(new Character({ id: 'f2', name:'F2', faction: 'Fellowship', versions: {classic: {id:'f2c', name:'F2', strength:1}}}, mockGameState));
+    mockGameState.placeCharacter(new Character({ id: 'f1', name:'F1', faction: 'Fellowship', versions: {classic: {id:'f1c', name:'F1', strength:1}}}, mockGameState).id, shire.id);
+    mockGameState.placeCharacter(new Character({ id: 'f2', name:'F2', faction: 'Fellowship', versions: {classic: {id:'f2c', name:'F2', strength:1}}}, mockGameState).id, shire.id);
     expect(shire.isAtCapacity('Fellowship')).toBe(false);
-    shire.addCharacter(new Character({ id: 'f3', name:'F3', faction: 'Fellowship', versions: {classic: {id:'f3c', name:'F3', strength:1}}}, mockGameState));
-    expect(shire.isAtCapacity('Fellowship')).toBe(false); // 3 out of 4, not at capacity yet
-    shire.addCharacter(new Character({ id: 'f4', name:'F4', faction: 'Fellowship', versions: {classic: {id:'f4c', name:'F4', strength:1}}}, mockGameState));
-    expect(shire.isAtCapacity('Fellowship')).toBe(true); // 4 out of 4, now at capacity
+    mockGameState.placeCharacter(new Character({ id: 'f3', name:'F3', faction: 'Fellowship', versions: {classic: {id:'f3c', name:'F3', strength:1}}}, mockGameState).id, shire.id);
+    expect(shire.isAtCapacity('Fellowship')).toBe(false);
+    mockGameState.placeCharacter(new Character({ id: 'f4', name:'F4', faction: 'Fellowship', versions: {classic: {id:'f4c', name:'F4', strength:1}}}, mockGameState).id, shire.id);
+    expect(shire.isAtCapacity('Fellowship')).toBe(true);
 
     expect(mordor.isAtCapacity('Sauron')).toBe(false);
-    mordor.addCharacter(new Character({ id: 's1', name:'S1', faction: 'Sauron', versions: {classic: {id:'s1c', name:'S1', strength:1}}}, mockGameState));
-    mordor.addCharacter(new Character({ id: 's2', name:'S2', faction: 'Sauron', versions: {classic: {id:'s2c', name:'S2', strength:1}}}, mockGameState));
-    mordor.addCharacter(new Character({ id: 's3', name:'S3', faction: 'Sauron', versions: {classic: {id:'s3c', name:'S3', strength:1}}}, mockGameState));
+    mockGameState.placeCharacter(new Character({ id: 's1', name:'S1', faction: 'Sauron', versions: {classic: {id:'s1c', name:'S1', strength:1}}}, mockGameState).id, mordor.id);
+    mockGameState.placeCharacter(new Character({ id: 's2', name:'S2', faction: 'Sauron', versions: {classic: {id:'s2c', name:'S2', strength:1}}}, mockGameState).id, mordor.id);
+    mockGameState.placeCharacter(new Character({ id: 's3', name:'S3', faction: 'Sauron', versions: {classic: {id:'s3c', name:'S3', strength:1}}}, mockGameState).id, mordor.id);
     expect(mordor.isAtCapacity('Sauron')).toBe(true);
   });
 

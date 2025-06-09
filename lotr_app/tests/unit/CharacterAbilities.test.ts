@@ -1,6 +1,6 @@
-import { CharacterModel } from '../models/Character';
-import { GameState } from '../models/GameState';
-import { RegionModel } from '../models/Region';
+import { CharacterModel } from '@/lib/models/Character';
+import { GameState } from '@/lib/models/GameState';
+import { RegionModel } from '@/lib/models/Region';
 import { 
   registerAbilityHandler, 
   triggerAbilities, 
@@ -8,8 +8,8 @@ import {
   initializeDefaultAbilityHandlers,
   BattleContext,
   MovementContext 
-} from './AbilitySystem';
-import { ICharacter, IRegion, ICombatCard } from '../../types/data';
+} from '@/lib/systems/AbilitySystem';
+import { ICharacter, IRegion, ICombatCard } from '@/types/data';
 
 // Mock game data
 const mockCharacters: ICharacter[] = [
@@ -187,7 +187,7 @@ describe('Character Abilities', () => {
     orcs = gameState.getCharacterById('CHAR_SAURON_ORCS')!;
 
     // Initialize handlers by importing the module (this triggers the default handlers)
-    require('./AbilitySystem');
+    require('@/lib/systems/AbilitySystem');
   });
 
   describe('Fellowship Abilities', () => {
@@ -649,7 +649,7 @@ describe('Character Abilities', () => {
       gameState.setCharacterLocation(orcs.id, 'REGION_RHUDAUR'); // Orcs start elsewhere
       
       // Import BattleSystem to test the full flow
-        const { resolveFullBattle } = require('../systems/BattleSystem');
+        const { resolveFullBattle } = require('@/lib/systems/BattleSystem');
         
         // Simulate a battle where Frodo is the initial defender
         const battleContext = resolveFullBattle(orcs, frodo, gameState);

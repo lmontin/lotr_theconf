@@ -1,7 +1,7 @@
-import { triggerAbilities, registerAbilityHandler, checkBattleEnd, BattleContext, MovementContext } from './AbilitySystem';
-import { CharacterModel } from '../models/Character';
-import { GameState } from '../models/GameState';
-import { ICharacter, IRegion, ICombatCard } from '../../types/data';
+import { triggerAbilities, registerAbilityHandler, checkBattleEnd, BattleContext, MovementContext } from '@/lib/systems/AbilitySystem';
+import { CharacterModel } from '@/lib/models/Character';
+import { GameState } from '@/lib/models/GameState';
+import { ICharacter, IRegion, ICombatCard } from '@/types/data';
 
 // Mock game data for testing
 const mockGameData = {

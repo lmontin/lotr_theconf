@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import GameBoard from './GameBoard';
+import GameBoard from '@/app/components/GameBoard';
 import { GameState } from '@/lib/models/GameState';
 import rawGameData from '@/data/gameData.json';
 import { IGameData } from '@/types/data';

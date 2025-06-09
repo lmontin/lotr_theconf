@@ -1,5 +1,5 @@
-import { GameState } from './GameState';
-import { ICharacter, IRegion, ICombatCard } from '../../types/data';
+import { GameState } from '@/lib/models/GameState';
+import { ICharacter, IRegion, ICombatCard } from '@/types/data';
 
 // Mock game data for testing
 const mockGameData = {
@@ -41,6 +41,7 @@ describe('GameState', () => {
   });
 
   it('should progress turns and phases correctly', () => {
+    gameState.setupComplete = true; // Manually set setup complete for phase progression
     // Initial: SETUP, Sauron
     gameState.nextPhase(); // SAURON_MOVE, Sauron
     expect(gameState.getCurrentPhase()).toBe('SAURON_MOVE');
