@@ -1,11 +1,11 @@
-import { GameState } from '../models/GameState';
-import { CharacterModel } from '../models/Character';
-import { RegionModel } from '../models/Region';
-import { Player } from '../models/Player';
-import { resolveFullBattle } from './BattleSystem';
-import { moveCharacter, getLegalMoves } from '../gameLogic/movement';
-import { triggerAbilities, registerAbilityHandler, clearAllAbilityHandlers, BattleContext } from './AbilitySystem';
-import { ICharacter, IRegion, ICombatCard } from '../../types/data';
+import { GameState } from '@/lib/models/GameState';
+import { CharacterModel } from '@/lib/models/Character';
+import { RegionModel } from '@/lib/models/Region';
+import { Player } from '@/lib/models/Player';
+import { resolveFullBattle } from '@/lib/systems/BattleSystem';
+import { moveCharacter, getLegalMoves } from '@/lib/gameLogic/movement';
+import { triggerAbilities, registerAbilityHandler, clearAllAbilityHandlers, BattleContext } from '@/lib/systems/AbilitySystem';
+import { ICharacter, IRegion, ICombatCard } from '@/types/data';
 
 describe('AbilitySystem Integration Tests', () => {
   let gameState: GameState;

@@ -1,6 +1,6 @@
-import { Player } from './Player';
-import { ICombatCard } from '../../types/data';
-import { Faction } from './GameState';
+import { Player } from '@/lib/models/Player';
+import { ICombatCard } from '@/types/data';
+import { Faction } from '@/lib/models/GameState';
 
 const mockCombatCards: ICombatCard[] = [
   { id: 'card1', name: 'Strength 1', faction: 'Fellowship', resolutionOrder: 1, strengthBonus: 1, effectDescription: '' },

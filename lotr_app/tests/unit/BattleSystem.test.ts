@@ -1,6 +1,6 @@
-import { resolveFullBattle } from './BattleSystem';
-import { CharacterModel } from '../models/Character';
-import { GameState } from '../models/GameState';
+import { resolveFullBattle } from '@/lib/systems/BattleSystem';
+import { CharacterModel } from '@/lib/models/Character';
+import { GameState } from '@/lib/models/GameState';
 
 describe('resolveFullBattle', () => {
   function makeCharacter(name: string, strength: number, faction: 'Fellowship' | 'Sauron') {

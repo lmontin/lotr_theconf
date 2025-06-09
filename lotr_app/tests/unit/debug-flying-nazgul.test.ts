@@ -1,7 +1,7 @@
-import { GameState } from '../models/GameState';
-import { CharacterModel } from '../models/Character';
-import { moveCharacter } from './movement';
-import { mockGameData } from '../models/mockGameData';
+import { GameState } from '@/lib/models/GameState';
+import { CharacterModel } from '@/lib/models/Character';
+import { moveCharacter } from '@/lib/gameLogic/movement';
+import { mockGameData } from '@/lib/models/mockGameData';
 
 describe('Debug Flying Nazgûl Real Scenario', () => {
   let gameState: GameState;
@@ -25,8 +25,8 @@ describe('Debug Flying Nazgûl Real Scenario', () => {
     console.log('Frodo location:', frodo.getLocation());
     console.log('Flying Nazgûl location:', flyingNazgul.getLocation());
     console.log('Rhudaur occupants:', rhudaurRegion.getOccupants().map(c => ({ name: c.name, faction: c.faction })));
-    console.log('Rhudaur contains Fellowship?', rhudaurRegion.containsFaction('Fellowship'));
-    console.log('Rhudaur contains Sauron?', rhudaurRegion.containsFaction('Sauron'));
+    console.log('Rhudaur contains Fellowship?', rhudaurRegion.getOccupants('Fellowship').length > 0);
+    console.log('Rhudaur contains Sauron?', rhudaurRegion.getOccupants('Sauron').length > 0);
   });
 
   test('should trigger battle when Flying Nazgûl moves to Rhudaur with Frodo', () => {

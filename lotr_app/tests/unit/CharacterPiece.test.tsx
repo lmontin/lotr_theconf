@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import CharacterPiece from './CharacterPiece';
+import CharacterPiece from '@/app/components/CharacterPiece';
 
 // Local type definitions to match what CharacterPiece component expects
 enum CharacterType {

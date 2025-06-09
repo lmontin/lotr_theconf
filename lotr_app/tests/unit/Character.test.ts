@@ -1,6 +1,6 @@
-import { CharacterModel as Character } from './Character';
-import { GameState } from './GameState';
-import { ICharacter as ICharacterData, IRegion, ICombatCard } from '../../types/data';
+import { CharacterModel as Character, CharacterVersion } from '@/lib/models/Character';
+import { GameState } from '@/lib/models/GameState'; // Will address this later if it causes issues
+import { ICharacter as ICharacterData, IRegion, ICombatCard } from '@/types/data';
 
 const mockFrodoData: ICharacterData = {
   id: 'char-frodo',

@@ -1,5 +1,5 @@
-import { revealCard } from './BattleSystem';
-import { ICombatCard } from '../../types/data';
+import { revealCard } from '@/lib/systems/BattleSystem';
+import { ICombatCard } from '@/types/data';
 
 describe('BattleSystem revealCard', () => {
   it('logs the card reveal and updates context', () => {

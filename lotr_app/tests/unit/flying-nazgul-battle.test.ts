@@ -1,8 +1,8 @@
-import { GameState } from '../models/GameState';
-import { CharacterModel } from '../models/Character';
-import { mockGameData } from '../models/mockGameData';
-import { getLegalMoves, moveCharacter } from './movement';
-import { MoveType } from '../../types/data';
+import { GameState } from '@/lib/models/GameState';
+import { CharacterModel } from '@/lib/models/Character';
+import { mockGameData } from '@/lib/models/mockGameData';
+import { getLegalMoves, moveCharacter } from '@/lib/gameLogic/movement';
+import { MoveType } from '@/types/data';
 
 describe('Flying Nazgûl Battle Triggering', () => {
   let gameState: GameState;

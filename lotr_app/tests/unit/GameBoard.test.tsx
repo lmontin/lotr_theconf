@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'; // Added within
 import '@testing-library/jest-dom';
-import GameBoard from './GameBoard';
+import GameBoard from '@/app/components/GameBoard';
 import { GameState } from '@/lib/models/GameState';
 import { CharacterModel } from '@/lib/models/Character';
 import { RegionModel } from '@/lib/models/Region';
@@ -120,6 +120,7 @@ describe('GameBoard Component', () => {
       }),
       moveCharacter: jest.fn().mockReturnValue(true), // Default mock, can be overridden in specific tests
       log: jest.fn(),
+      getActiveBattle: jest.fn(() => null), // Added mock method
       // Add any other GameState methods called by GameBoard if not already present
     } as unknown as jest.Mocked<GameState>;
 

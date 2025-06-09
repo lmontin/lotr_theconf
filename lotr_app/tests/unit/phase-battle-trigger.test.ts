@@ -1,6 +1,6 @@
-import { GameState } from '../models/GameState';
-import { mockGameData } from '../models/mockGameData';
-import { moveCharacter } from './movement';
+import { GameState } from '@/lib/models/GameState';
+import { mockGameData } from '@/lib/models/mockGameData';
+import { moveCharacter } from '@/lib/gameLogic/movement';
 
 describe('Phase-Based Battle Triggering', () => {
   let gameState: GameState;
@@ -16,6 +16,7 @@ describe('Phase-Based Battle Triggering', () => {
   test('should show initial game state and phase progression', () => {
     // Create fresh state for this test
     gameState = createFreshGameState();
+    gameState.setupComplete = true; // Manually set setup complete for phase progression tests
     
     console.log('=== INITIAL STATE ===');
     console.log(`Turn: ${gameState.getTurn()}`);
@@ -37,6 +38,7 @@ describe('Phase-Based Battle Triggering', () => {
   test('should trigger battle when Flying Nazgûl moves during correct SAURON_MOVE phase', () => {
     // Create fresh state for this test
     gameState = createFreshGameState();
+    gameState.setupComplete = true; // Manually set setup complete
     
     // Setup characters in positions needed for this test
     gameState.placeCharacter('CHAR_FELLOWSHIP_FRODO', 'REGION_RHUDAUR');
@@ -83,6 +85,7 @@ describe('Phase-Based Battle Triggering', () => {
   test('should NOT trigger battle when Flying Nazgûl moves during wrong FELLOWSHIP_MOVE phase', () => {
     // Create completely fresh state for this test
     gameState = createFreshGameState();
+    gameState.setupComplete = true; // Manually set setup complete
     
     // Setup characters in positions needed for this test
     gameState.placeCharacter('CHAR_FELLOWSHIP_FRODO', 'REGION_RHUDAUR');
@@ -129,6 +132,7 @@ describe('Phase-Based Battle Triggering', () => {
   test('should log the battle trigger condition details', () => {
     // Create fresh state for this test
     gameState = createFreshGameState();
+    gameState.setupComplete = true; // Manually set setup complete
     
     // Setup characters in positions needed for this test
     gameState.placeCharacter('CHAR_FELLOWSHIP_FRODO', 'REGION_RHUDAUR');

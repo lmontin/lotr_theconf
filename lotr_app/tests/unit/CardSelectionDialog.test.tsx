@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { CardSelectionDialog } from './CardSelectionDialog';
-import { ICombatCard } from '../../../src/types/data';
+import { CardSelectionDialog } from '@/app/components/CardSelectionDialog';
+import { ICombatCard } from '@/types/data';
 
 describe('CardSelectionDialog', () => {
   const mockHand: ICombatCard[] = [
