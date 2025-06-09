@@ -39,6 +39,8 @@ describe('GameBoard Integration Test - Infinite Re-render Issue', () => {
     gameState = new GameState(gameData);
     gameState.randomlyPlaceFactionCharacters('Fellowship');
     gameState.randomlyPlaceFactionCharacters('Sauron');
+    gameState.setupComplete = true; // Ensure setup is marked as complete
+    gameState.nextPhase(); // Advance from SETUP to SAURON_MOVE
     
     // Track how many times onGameUpdate is called
     onGameUpdateCallCount = 0;

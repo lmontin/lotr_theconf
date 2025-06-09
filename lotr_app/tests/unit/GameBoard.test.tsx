@@ -105,8 +105,9 @@ describe('GameBoard Component', () => {
     mockGameStateInstance = {
       getAllCharacters: jest.fn(() => [mockCharacter1Data, mockCharacter2Data]),
       getAllRegions: jest.fn(() => [mockRegion1Data, mockRegion2Data, mockRegion3Data]),
-      getCurrentPlayer: jest.fn(() => 'Fellowship'), // Add the missing method
-      getTurn: jest.fn(() => 1), // Add the missing method
+      getCurrentPlayer: jest.fn(() => 'Fellowship'),
+      getTurn: jest.fn(() => 1),
+      getCurrentPhase: jest.fn(() => 'SETUP'), // Added mock for getCurrentPhase
       getCharacterById: jest.fn(id => {
         if (id === 'char1') return mockCharacter1Data;
         if (id === 'char2') return mockCharacter2Data;

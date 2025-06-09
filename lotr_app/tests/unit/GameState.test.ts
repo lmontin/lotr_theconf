@@ -28,7 +28,7 @@ describe('GameState', () => {
   });
 
   it('should initialize correctly', () => {
-    expect(gameState.getTurn()).toBe(1);
+    expect(gameState.getTurn()).toBe(0); // Turn 0 during SETUP
     expect(gameState.getCurrentPhase()).toBe('SETUP');
     expect(gameState.getCurrentPlayer()).toBe('Sauron');
     expect(gameState.winner).toBeNull();

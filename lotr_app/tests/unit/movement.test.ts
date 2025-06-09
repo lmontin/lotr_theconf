@@ -1,3 +1,10 @@
+import { GameState } from '@/lib/models/GameState';
+import { CharacterModel } from '@/lib/models/Character';
+import { RegionModel, RegionName } from '@/lib/models/Region';
+import { mockGameData } from '@/lib/models/mockGameData';
+import { getLegalMoves, moveCharacter, MoveType, Path, canEnterRegion } from '@/lib/gameLogic/movement';
+import { ICharacter, Faction, /*MoveType,*/ IRegion } from '@/types/data';
+
 describe('Fellowship Special Forward Movement', () => {
   it('should include a fellowshipSpecialForward move from Fangorn to Rohan for a Fellowship character', () => {
     // Use a minimal game state with Fangorn and Rohan and a Fellowship character
@@ -25,12 +32,6 @@ describe('Fellowship Special Forward Movement', () => {
     }
   });
 });
-import { GameState } from '@/lib/models/GameState';
-import { CharacterModel } from '@/lib/models/Character';
-import { RegionModel, RegionName } from '@/lib/models/Region';
-import { mockGameData } from '@/lib/models/mockGameData';
-import { getLegalMoves, moveCharacter, MoveType, Path, canEnterRegion } from '@/lib/gameLogic/movement';
-import { ICharacter, Faction, /*MoveType,*/ IRegion } from '@/types/data';
 
 // Helper to create a game state with some initial setup for testing
 const createRichMockGameState = (): GameState => {

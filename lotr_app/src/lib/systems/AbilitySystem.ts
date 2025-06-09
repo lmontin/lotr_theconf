@@ -453,7 +453,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Frodo's retreat ability - can retreat sideways when defending (not in mountains)
    */
-  registerAbilityHandler('FRODO_RETREAT', (source, context) => {
+  registerAbilityHandler('frodo_retreat', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Frodo') {
       return;
     }
@@ -511,7 +511,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Sam's substitute ability - can take Frodo's place if in same region and Frodo is attacked
    */
-  registerAbilityHandler('SAM_SUBSTITUTE', (source, context) => {
+  registerAbilityHandler('substitute', (source, context) => { // Assuming 'substitute' is Sam's ability ID in data
     if (!(source instanceof CharacterModel) || source.name !== 'Sam') {
       return;
     }
@@ -552,7 +552,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Sam's strength bonus ability - strength becomes 5 when with Frodo
    */
-  registerAbilityHandler('SAM_STRENGTH_BONUS', (source, context) => {
+  registerAbilityHandler('strength_bonus', (source, context) => { // Assuming 'strength_bonus' is Sam's ability ID
     if (!(source instanceof CharacterModel) || source.name !== 'Sam') {
       return;
     }
@@ -582,7 +582,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Pippin's retreat ability - can retreat backward when attacking
    */
-  registerAbilityHandler('PIPPIN_RETREAT', (source, context) => {
+  registerAbilityHandler('pippin_retreat', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Pippin') {
       return;
     }
@@ -631,7 +631,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Merry vs Witch-king ability - automatically defeats Witch-king
    */
-  registerAbilityHandler('MERRY_VS_WITCHKING', (source, context) => {
+  registerAbilityHandler('merry_vs_witchking', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Merry') {
       return;
     }
@@ -663,7 +663,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Gandalf's reveal card ability - forces Sauron to reveal card first
    */
-  registerAbilityHandler('GANDALF_REVEAL_CARD', (source, context) => {
+  registerAbilityHandler('gandalf_reveal_card', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Gandalf') {
       return;
     }
@@ -679,7 +679,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Aragorn's special attack move ability - can move in any direction when attacking
    */
-  registerAbilityHandler('ARAGORN_SPECIAL_ATTACK_MOVE', (source, context) => {
+  registerAbilityHandler('aragorn_special_attack_move', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Aragorn') {
       return;
     }
@@ -729,7 +729,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Legolas vs Flying Nazgûl ability - defeats Flying Nazgûl before cards
    */
-  registerAbilityHandler('LEGOLAS_VS_FLYING_NAZGUL', (source, context) => {
+  registerAbilityHandler('legolas_vs_flying_nazgul', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Legolas') {
       return;
     }
@@ -761,7 +761,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Gimli vs Orcs ability - defeats Orcs before their ability
    */
-  registerAbilityHandler('GIMLI_VS_ORCS', (source, context) => {
+  registerAbilityHandler('gimli_vs_orcs', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Gimli') {
       return;
     }
@@ -793,7 +793,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Boromir's mutual destruction ability - both characters defeated (except vs Warg)
    */
-  registerAbilityHandler('BOROMIR_MUTUAL_DESTRUCTION', (source, context) => {
+  registerAbilityHandler('boromir_mutual_destruction', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Boromir') {
       return;
     }
@@ -832,7 +832,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Balrog's tunnel ambush ability - defeats Fellowship character using tunnel without battle
    */
-  registerAbilityHandler('BALROG_TUNNEL_AMBUSH', (source, context) => {
+  registerAbilityHandler('balrog_tunnel_ambush', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Balrog') {
       return;
     }
@@ -863,7 +863,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Shelob's post-battle move ability - moves to Gondor after winning a battle
    */
-  registerAbilityHandler('SHELOB_POST_BATTLE_MOVE', (source, context) => {
+  registerAbilityHandler('shelob_post_battle_move', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Shelob') {
       return;
     }
@@ -915,7 +915,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Witch-king's sideways attack ability - can move sideways when attacking
    */
-  registerAbilityHandler('WITCHKING_SIDEWAYS_ATTACK', (source, context) => {
+  registerAbilityHandler('witchking_sideways_attack', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Witch-king') {
       return;
     }
@@ -958,7 +958,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Witch-king's Frodo retreat option - Frodo can retreat to Witch-king's previous position
    */
-  registerAbilityHandler('WITCHKING_FRODO_RETREAT_OPTION', (source, context) => {
+  registerAbilityHandler('witchking_frodo_retreat_option', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Witch-king') {
       return;
     }
@@ -983,7 +983,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Flying Nazgûl's special move ability - can move to any region with single Fellowship character
    */
-  registerAbilityHandler('FLYING_NAZGUL_SPECIAL_MOVE', (source, context) => {
+  registerAbilityHandler('flying_nazgul_special_move', (source, context) => {
     logAbility('AbilitySystem', 'FLYING_NAZGUL_SPECIAL_MOVE', 'Flying Nazgul ability triggered', {
       sourceId: source instanceof CharacterModel ? source.id : 'unknown',
       sourceName: source instanceof CharacterModel ? source.name : 'unknown',
@@ -1088,7 +1088,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Black Rider's long charge ability - can move forward any number of regions when attacking
    */
-  registerAbilityHandler('BLACK_RIDER_LONG_CHARGE', (source, context) => {
+  registerAbilityHandler('black_rider_long_charge', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Black Rider') {
       return;
     }
@@ -1140,7 +1140,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Saruman's force strength comparison ability - can skip cards and use only strength
    */
-  registerAbilityHandler('SARUMAN_FORCE_STRENGTH_COMPARISON', (source, context) => {
+  registerAbilityHandler('saruman_force_strength_comparison', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Saruman') {
       return;
     }
@@ -1161,7 +1161,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Orcs' first strike ability - defeats Fellowship character before other abilities
    */
-  registerAbilityHandler('ORCS_FIRST_STRIKE', (source, context) => {
+  registerAbilityHandler('orcs_first_strike', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Orcs') {
       return;
     }
@@ -1218,7 +1218,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Warg's negate ability - opposing Fellowship character's ability has no effect
    */
-  registerAbilityHandler('WARG_NEGATE_ABILITY', (source, context) => {
+  registerAbilityHandler('warg_negate_ability', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Warg') {
       return;
     }
@@ -1234,7 +1234,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Cave Troll's negate Sauron card ability - Sauron's combat card has no effect
    */
-  registerAbilityHandler('CAVE_TROLL_NEGATE_SAURON_CARD', (source, context) => {
+  registerAbilityHandler('cave_troll_negate_sauron_card', (source, context) => {
     if (!(source instanceof CharacterModel) || source.name !== 'Cave Troll') {
       return;
     }
@@ -1248,11 +1248,11 @@ function initializeDefaultHandlers(): void {
   });
 
   // Combat card abilities (placeholders)
-  registerAbilityHandler('CARD_EYE_OF_SAURON', (source, context) => {
+  registerAbilityHandler('card_eye_of_sauron', (source, context) => {
     // TODO: Implement Eye of Sauron card logic
   });
   
-  registerAbilityHandler('CARD_NOBLE_SACRIFICE', (source, context) => {
+  registerAbilityHandler('card_noble_sacrifice', (source, context) => {
     // TODO: Implement Noble Sacrifice card logic
   });
 }

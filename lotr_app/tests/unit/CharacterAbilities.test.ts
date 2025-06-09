@@ -673,7 +673,7 @@ describe('Character Abilities', () => {
       gameState.setCharacterLocation(orcs.id, 'REGION_RHUDAUR');
       sam.reveal(); // Sam is already revealed
       
-      const { resolveFullBattle } = require('../systems/BattleSystem');
+      const { resolveFullBattle } = require('@/lib/systems/BattleSystem');
         const battleContext = resolveFullBattle(orcs, frodo, gameState);
       
       // With Sam unable to substitute:

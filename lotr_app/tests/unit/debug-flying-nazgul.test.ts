@@ -37,9 +37,9 @@ describe('Debug Flying Nazgûl Real Scenario', () => {
 
     // Execute the move
     const moveResult = moveCharacter(
-      gameState,
       'CHAR_SAURON_FLYING_NAZGUL',
       'REGION_RHUDAUR',
+      gameState,
       'SPECIAL'
     );
 

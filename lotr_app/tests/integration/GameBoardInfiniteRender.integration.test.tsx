@@ -29,6 +29,8 @@ describe('GameBoard - Infinite Re-render Prevention', () => {
     const gameState = new GameState(gameData);
     gameState.randomlyPlaceFactionCharacters('Fellowship');
     gameState.randomlyPlaceFactionCharacters('Sauron');
+    gameState.setupComplete = true; // Ensure setup is marked as complete
+    gameState.nextPhase(); // Advance from SETUP to SAURON_MOVE
 
     const mockOnGameUpdate = jest.fn();
     
@@ -60,6 +62,8 @@ describe('GameBoard - Infinite Re-render Prevention', () => {
     const gameState = new GameState(gameData);
     gameState.randomlyPlaceFactionCharacters('Fellowship');
     gameState.randomlyPlaceFactionCharacters('Sauron');
+    gameState.setupComplete = true; // Ensure setup is marked as complete
+    gameState.nextPhase(); // Advance from SETUP to SAURON_MOVE
 
     const mockOnGameUpdate = jest.fn();
     
@@ -90,6 +94,8 @@ describe('GameBoard - Infinite Re-render Prevention', () => {
   test('should not cause excessive re-renders with character selection state changes', async () => {
     const gameState = new GameState(gameData);
     gameState.randomlyPlaceFactionCharacters('Fellowship');
+    gameState.setupComplete = true; // Ensure setup is marked as complete
+    gameState.nextPhase(); // Advance from SETUP to SAURON_MOVE
     
     const mockOnGameUpdate = jest.fn();
     
