@@ -511,7 +511,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Sam's substitute ability - can take Frodo's place if in same region and Frodo is attacked
    */
-  registerAbilityHandler('substitute', (source, context) => { // Assuming 'substitute' is Sam's ability ID in data
+  registerAbilityHandler('sam_substitute', (source, context) => { // Assuming 'substitute' is Sam's ability ID in data
     if (!(source instanceof CharacterModel) || source.name !== 'Sam') {
       return;
     }
@@ -552,7 +552,7 @@ function initializeDefaultHandlers(): void {
   /**
    * Sam's strength bonus ability - strength becomes 5 when with Frodo
    */
-  registerAbilityHandler('strength_bonus', (source, context) => { // Assuming 'strength_bonus' is Sam's ability ID
+  registerAbilityHandler('sam_strength_bonus', (source, context) => { // Assuming 'strength_bonus' is Sam's ability ID
     if (!(source instanceof CharacterModel) || source.name !== 'Sam') {
       return;
     }
